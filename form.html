@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>資料收集表格</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="form-style.css">
+</head>
+<body>
+    <div class="form-container">
+        <div class="form-content">
+            <div class="left-section">
+                <div style="display: flex; align-items: center; height: 42px; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 3px solid var(--accent);">
+                    <h2 style="color: var(--accent); font-size: 22px; margin: 0; line-height: 1;">基本資訊</h2>
+                </div>
+                <form id="personalInfoForm">
+                    <div class="form-group">
+                        <label for="name">1. 您的姓名：</label>
+                        <input type="text" id="name" name="name" autocomplete="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="participantId">2. 參與者編號：</label>
+                        <input type="text" id="participantId" name="participantId" autocomplete="off" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="recordDate">3. 記錄日期：</label>
+                        <select id="recordDate" name="recordDate" required>
+                            <option value="">請選擇</option>
+                            <option value="workday1">第一個工作日</option>
+                            <option value="workday2">第二個工作日</option>
+                            <option value="restday">第一個休息日</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>4. 您的性別：</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="gender" value="male" required aria-label="性別：男">
+                                <span>男</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="gender" value="female" required aria-label="性別：女">
+                                <span>女</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="age">5. 您的年齡：</label>
+                        <div class="age-input">
+                            <input type="number" id="age" name="age" min="1" max="120" autocomplete="age" required>
+                            <span class="unit">歲</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="right-section">
+                <div style="display: flex; align-items: center; justify-content: space-between; height: 42px; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 3px solid var(--accent);">
+                    <h2 style="color: var(--accent); font-size: 22px; margin: 0; line-height: 1;">記錄助手</h2>
+                    <button id="helpBtn" style="background: none; border: 2px solid var(--accent); color: var(--accent); border-radius: 50%; width: 32px; height: 32px; font-size: 18px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">?</button>
+                </div>
+                <div class="chatbot-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="bot-message">
+                            <div class="message-content">
+                                <strong>記錄流程</strong><br>
+                                Step 1：在左側頁面欄輸入您的基本資訊<br>
+                                Step 2：選擇餐次記錄卡片<br>
+                                Step 3：拍照上傳您的飲食圖片並給出簡單的文字描述
+                            </div>
+                        </div>
+                        <div class="bot-message">
+                            <div class="message-content">
+                                <strong>請選擇您要記錄的餐次：</strong>
+                                <div class="meal-options">
+                                    <button class="meal-option" data-value="breakfast"><strong>早餐</strong>（通常6:00-9:00）</button>
+                                    <button class="meal-option" data-value="snack_morning"><strong>上午加餐</strong>（9:00-11:00）</button>
+                                    <button class="meal-option" data-value="lunch"><strong>午餐</strong>（11:00-13:30）</button>
+                                    <button class="meal-option" data-value="snack_afternoon"><strong>下午加餐</strong>（14:00-17:00）</button>
+                                    <button class="meal-option" data-value="dinner"><strong>晚餐</strong>（17:00-20:00）</button>
+                                    <button class="meal-option" data-value="snack_night"><strong>晚上加餐</strong>（20:00-睡前）</button>
+                                </div>
+                                <div id="mealSelectionStatus" class="selection-status"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chatInput" placeholder="輸入訊息..." disabled>
+                        <button id="chatSend" disabled>發送</button>
+                        <button id="resetBtn" class="reset-btn">重新開始</button>
+                        <div id="actionButtons" class="action-buttons-container" style="display: none;">
+                            <button class="action-btn new-record-btn" onclick="startNewRecord()">開始新記錄</button>
+                            <button class="action-btn finish-btn" onclick="finishDailyRecord()">完成今日飲食記錄</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Modal -->
+    <div id="faqModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 style="color: var(--accent); margin-top: 0;">常見問題</h2>
+            <div style="text-align: left; line-height: 1.8;">
+                <p><strong>Q：如果忘記拍攝怎麼辦？</strong><br>
+A：請儘量回憶並描述食物和大概分量。例如：「晚餐吃了外賣牛肉麵，大概一碗」。</p>
+                
+                <p><strong>Q：如何估算分量？（參照文檔鏈接）</strong><br>
+A：簡單參照：<br>
+&nbsp;&nbsp;&nbsp;&nbsp;1碗米飯≈200g<br>
+&nbsp;&nbsp;&nbsp;&nbsp;1杯飲料≈250毫升</p>
+                
+                <p><strong>Q：包裝食品需要記錄什麼？</strong><br>
+A：請拍攝包裝上的營養成分表。如果無法拍攝，請記錄品牌和產品名稱。</p>
+                
+                <p><strong>Q：調味料需要記錄嗎？</strong><br>
+A：日常使用的油、鹽、醬料不需要特別記錄。但如果使用了較多（如很多沙拉醬），請備註說明。</p>
+                
+                <p style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;"><strong>【聯繫方式】</strong><br>
+如有問題，請聯繫：Miss Xu +825 51356879</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="form-script.js?v=cachebust-20240112"></script>
+</body>
+</html>
