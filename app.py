@@ -8,15 +8,18 @@ app = Flask(__name__)
 def send_static(filename):
     return send_from_directory('static', filename)
 
-# Serve form.html as the main page
+# Serve index.html as the welcome page
 @app.route('/')
-def index():
-    return send_from_directory('.', 'form.html')
-
-# Serve index.html
 @app.route('/index.html')
 def home():
+    print("[route] home -> index.html", flush=True)
     return send_from_directory('.', 'index.html')
+
+# Serve form.html (meal tracking)
+@app.route('/form.html')
+def form_page():
+    print("[route] form_page -> form.html", flush=True)
+    return send_from_directory('.', 'form.html')
 
 # Serve any other HTML files
 @app.route('/<path:filename>')

@@ -87,9 +87,14 @@
                         <!-- Meal options will be shown dynamically after user selects a date -->
                     </div>
                     <div class="chat-input-area">
-                        <input type="text" id="chatInput" placeholder="輸入訊息..." disabled>
-                        <button id="chatSend" disabled>發送</button>
-                        <button id="resetBtn" class="reset-btn">重新開始</button>
+                        <div class="chat-input-row">
+                            <input type="text" id="chatInput" placeholder="輸入訊息..." disabled>
+                            <button id="chatSend" disabled>發送</button>
+                        </div>
+                        <div class="chat-buttons-row">
+                            <button id="resetBtn" class="reset-btn">重新開始</button>
+                            <button id="switchBtn" class="nav-btn" onclick="goToExerciseTracking()">切換至運動記錄</button>
+                        </div>
                         <div id="actionButtons" class="action-buttons-container" style="display: none;">
                             <button class="action-btn new-record-btn" onclick="startNewRecord()">開始新記錄</button>
                             <button class="action-btn finish-btn" onclick="finishDailyRecord()">完成今日飲食記錄</button>

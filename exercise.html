@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>運動記錄表格</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="form-style.css">
+    <link rel="stylesheet" href="exercise-style.css">
+</head>
+<body class="form-page">
+    <div class="form-container">
+        <div class="form-content">
+            <div class="left-section">
+                <div style="display: flex; align-items: center; height: 42px; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 3px solid var(--accent);">
+                    <h2 style="color: var(--accent); font-size: 22px; margin: 0; line-height: 1;">基本資訊</h2>
+                </div>
+                <form id="personalInfoForm">
+                    <div class="form-group">
+                        <label for="name">1. 您的姓名：</label>
+                        <input type="text" id="name" name="name" autocomplete="name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="participantId">2. 參與者編號：</label>
+                        <input type="text" id="participantId" name="participantId" autocomplete="off" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>3. 您的性別：</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="gender" value="male" required aria-label="性別：男">
+                                <span>男</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="gender" value="female" required aria-label="性別：女">
+                                <span>女</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="age">4. 您的年齡：</label>
+                        <div class="age-input">
+                            <input type="number" id="age" name="age" min="1" max="120" autocomplete="age" required>
+                            <span class="unit">歲</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="right-section">
+                <div style="display: flex; align-items: center; justify-content: space-between; height: 42px; margin-bottom: 25px; padding-bottom: 10px; border-bottom: 3px solid var(--accent);">
+                    <h2 style="color: var(--accent); font-size: 22px; margin: 0; line-height: 1;">運動記錄</h2>
+                    <button id="helpBtn" style="background: none; border: 2px solid var(--accent); color: var(--accent); border-radius: 50%; width: 32px; height: 32px; font-size: 18px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">?</button>
+                </div>
+
+                <!-- Date Selection Section -->
+                <div id="dateSelectionSection" class="date-selection-section" style="background: white; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                    <div style="margin-bottom: 15px;">
+                        <strong style="color: var(--accent); font-size: 16px;">請先選擇記錄日期：</strong>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">
+                            <input type="radio" name="exerciseRecordDate" value="workday1" style="margin-right: 10px;">
+                            <span style="font-size: 15px;">第一個工作日</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">
+                            <input type="radio" name="exerciseRecordDate" value="workday2" style="margin-right: 10px;">
+                            <span style="font-size: 15px;">第二個工作日</span>
+                        </label>
+                        <label style="display: flex; align-items: center; cursor: pointer; padding: 8px; border-radius: 8px; transition: background 0.2s;" onmouseover="this.style.background='#f0f0f0'" onmouseout="this.style.background='transparent'">
+                            <input type="radio" name="exerciseRecordDate" value="restday" style="margin-right: 10px;">
+                            <span style="font-size: 15px;">第一個休息日</span>
+                        </label>
+                    </div>
+                    <button onclick="confirmExerciseDate()" style="width: 100%; margin-top: 15px; padding: 12px; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold; transition: transform 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">確認日期</button>
+                </div>
+
+                <div id="selectedDateDisplay" style="display: none; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%); color: white; border-radius: 8px; padding: 12px 20px; margin-bottom: 20px; font-weight: bold; text-align: center; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);">
+                    記錄日期：<span id="selectedDateText"></span>
+                </div>
+                
+                <div class="exercise-quarters-container" id="exerciseQuartersContainer" style="display: none;">
+                    <div style="margin-bottom: 15px; grid-column: 1 / -1;">
+                        <button onclick="setAllUnfilledAsEmpty()" style="width: 100%; padding: 10px; background: #f3f4f6; border: 2px solid #d1d5db; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; color: #374151; transition: all 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">將所有空白時段設為無運動</button>
+                    </div>
+                    <!-- Morning Quarter: 0:00-6:00 -->
+                    <div class="exercise-quarter-card" data-quarter="morning">
+                        <div class="quarter-title">凌晨-早晨 (0:00-6:00)</div>
+                        <div class="quarter-content">
+                            <div class="time-slots-grid" data-quarter="morning"></div>
+                        </div>
+                    </div>
+
+                    <!-- Afternoon Quarter: 6:00-12:00 -->
+                    <div class="exercise-quarter-card" data-quarter="afternoon">
+                        <div class="quarter-title">上午 (6:00-12:00)</div>
+                        <div class="quarter-content">
+                            <div class="time-slots-grid" data-quarter="afternoon"></div>
+                        </div>
+                    </div>
+
+                    <!-- Evening Quarter: 12:00-18:00 -->
+                    <div class="exercise-quarter-card" data-quarter="evening">
+                        <div class="quarter-title">下午 (12:00-18:00)</div>
+                        <div class="quarter-content">
+                            <div class="time-slots-grid" data-quarter="evening"></div>
+                        </div>
+                    </div>
+
+                    <!-- Night Quarter: 18:00-24:00 -->
+                    <div class="exercise-quarter-card" data-quarter="night">
+                        <div class="quarter-title">晚上 (18:00-24:00)</div>
+                        <div class="quarter-content">
+                            <div class="time-slots-grid" data-quarter="night"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exercise Summary Section -->
+                <div id="exerciseSummarySection" style="display: none; margin-top: 30px;">
+                    <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                        <h3 style="color: var(--accent); margin-top: 0; margin-bottom: 20px; font-size: 16px;">運動記錄摘要</h3>
+                        <div id="exerciseSummaryContent" style="margin-bottom: 20px;">
+                            <!-- Summary will be populated here -->
+                        </div>
+                        <div class="exercise-form-group">
+                            <label for="dailyActivityLevel">以上活動量是</label>
+                            <select id="dailyActivityLevel">
+                                <option value="">請選擇</option>
+                                <option value="少於平常">少於平常</option>
+                                <option value="平常">平常</option>
+                                <option value="多於平常">多於平常</option>
+                            </select>
+                        </div>
+                        <div class="exercise-form-group" id="dailyReasonGroup" style="display: none;">
+                            <label for="dailyActivityReason">原因</label>
+                            <textarea id="dailyActivityReason" placeholder="請說明為什麼活動量與平常不同" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="exercise-action-buttons" style="margin-top: 30px; display: flex; gap: 10px;">
+                    <button class="nav-btn" onclick="goToMealTracking()" style="flex: 1;">切換至飲食記錄</button>
+                    <button class="finish-btn" onclick="finishExerciseRecord()" style="flex: 1;">完成今天的記錄</button>
+                </div>
+                <div id="exerciseModal" class="exercise-modal" style="display: none;">
+                    <div class="exercise-modal-content">
+                        <div class="exercise-modal-header">
+                            <h3 id="exerciseModalTitle">運動記錄 - 時間段</h3>
+                            <button class="exercise-close-btn" onclick="closeExerciseForm()">&times;</button>
+                        </div>
+                        <div class="exercise-modal-body">
+                            <div class="exercise-form-group">
+                                <label for="exerciseType">運動類型</label>
+                                <select id="exerciseType">
+                                    <option value="">無運動</option>
+                                    <option value="走路">走路</option>
+                                    <option value="跑步">跑步</option>
+                                    <option value="騎單車">騎單車</option>
+                                    <option value="游泳">游泳</option>
+                                    <option value="瑜伽">瑜伽</option>
+                                    <option value="健身房">健身房</option>
+                                    <option value="球類運動">球類運動</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div class="exercise-form-group">
+                                <label for="exerciseIntensity">運動強度</label>
+                                <select id="exerciseIntensity">
+                                    <option value="">請選擇強度</option>
+                                    <option value="輕度">輕度（容易說話）</option>
+                                    <option value="中度">中度（有些費力）</option>
+                                    <option value="高度">高度（很難說話）</option>
+                                </select>
+                            </div>
+                            <div class="exercise-form-group">
+                                <label for="exerciseDescription">補充描述（可選）</label>
+                                <textarea id="exerciseDescription" placeholder="例如：步行1000步，跑步2km，瑜伽10min等" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div class="exercise-modal-footer">
+                            <button class="cancel-btn" onclick="closeExerciseForm()">取消</button>
+                            <button class="delete-btn" id="deleteExerciseBtn" onclick="deleteCurrentExercise()" style="display: none;">清除記錄</button>
+                            <button class="submit-btn" onclick="submitExerciseRecord()">保存記錄</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Modal -->
+    <div id="faqModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 style="color: var(--accent); margin-top: 0;">常見問題</h2>
+            <div style="text-align: left; line-height: 1.8;">
+                <p><strong>Q：運動記錄需要包括所有活動嗎？</strong><br>
+A：請記錄所有持續10分鐘以上的活動，包括日常活動（如走路）和正式運動。</p>
+                
+                <p><strong>Q：如何估算運動時長？</strong><br>
+A：記錄您實際進行的時間。例如，散步20分鐘，健身房訓練45分鐘。</p>
+                
+                <p><strong>Q：運動強度如何判斷？</strong><br>
+A：<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• 輕度：可以輕鬆說話<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• 中度：說話有些費力<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• 高度：很難說話或無法說話</p>
+                
+                <p><strong>Q：可以記錄多次運動嗎？</strong><br>
+A：可以！每個時段內可以記錄多個運動。請使用「添加運動記錄」按鈕。</p>
+                
+                <p style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;"><strong>【聯繫方式】</strong><br>
+如有問題，請聯繫：Miss Xu +825 51356879</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="exercise-script.js?v=20260113-exercise"></script>
+</body>
+</html>

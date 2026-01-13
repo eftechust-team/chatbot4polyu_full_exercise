@@ -1212,6 +1212,11 @@ window.resetForm = function() {
     }
 };
 
+// Go to exercise tracking page (without clearing data)
+window.goToExerciseTracking = function() {
+    window.location.href = 'exercise.html';
+};
+
 // Start a new record (different from reset - keeps personal info and chat history)
 window.startNewRecord = function() {
     // Reset chat state variables (but keep chat history)
