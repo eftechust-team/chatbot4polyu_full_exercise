@@ -56,6 +56,52 @@ document.addEventListener('DOMContentLoaded', function() {
     // Load saved user info if available
     loadUserInfo();
     
+    // Auto-save user info when fields change
+    ['name', 'participantId', 'age'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', function() {
+                const userInfo = {
+                    name: document.getElementById('name')?.value,
+                    participantId: document.getElementById('participantId')?.value,
+                    gender: document.querySelector('input[name="gender"]:checked')?.value,
+                    age: document.getElementById('age')?.value
+                };
+                localStorage.setItem('userInfo', JSON.stringify(userInfo));
+            });
+            element.addEventListener('blur', function() {
+                const userInfo = {
+                    name: document.getElementById('name')?.value,
+                    participantId: document.getElementById('participantId')?.value,
+                    gender: document.querySelector('input[name="gender"]:checked')?.value,
+                    age: document.getElementById('age')?.value
+                };
+                localStorage.setItem('userInfo', JSON.stringify(userInfo));
+            });
+        }
+    });
+    
+    // Auto-save gender selection
+    document.querySelectorAll('input[name="gender"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const userInfo = {
+                name: document.getElementById('name')?.value,
+                participantId: document.getElementById('participantId')?.value,
+                gender: document.querySelector('input[name="gender"]:checked')?.value,
+                age: document.getElementById('age')?.value
+            };
+            localStorage.setItem('userInfo', JSON.stringify(userInfo));
+        });
+    });
+    
+    // Auto-save date selection
+    document.querySelectorAll('input[name="exerciseRecordDate"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const selectedDate = this.value;
+            localStorage.setItem('selectedRecordDate', selectedDate);
+        });
+    });
+    
     // Load exercise records from localStorage
     const savedExerciseRecords = localStorage.getItem('exerciseRecords');
     if (savedExerciseRecords) {
@@ -119,8 +165,20 @@ function loadUserInfo() {
         // Auto-fill form
         if (userInfo.name) document.getElementById('name').value = userInfo.name;
         if (userInfo.participantId) document.getElementById('participantId').value = userInfo.participantId;
-        if (userInfo.gender) document.querySelector(`input[name="gender"][value="${userInfo.gender}"]`).checked = true;
+        if (userInfo.gender) {
+            const genderRadio = document.querySelector(`input[name="gender"][value="${userInfo.gender}"]`);
+            if (genderRadio) genderRadio.checked = true;
+        }
         if (userInfo.age) document.getElementById('age').value = userInfo.age;
+    }
+    
+    // Load selected date
+    const savedDate = localStorage.getItem('selectedRecordDate');
+    if (savedDate) {
+        const dateRadio = document.querySelector(`input[name="exerciseRecordDate"][value="${savedDate}"]`);
+        if (dateRadio && !document.querySelector('input[name="exerciseRecordDate"]:checked')) {
+            dateRadio.checked = true;
+        }
     }
 }
 
@@ -140,6 +198,13 @@ function saveUserInfo() {
     };
     
     localStorage.setItem('userInfo', JSON.stringify(userInfo));
+    
+    // Save selected date when user info is saved
+    const selectedDate = document.querySelector('input[name="exerciseRecordDate"]:checked')?.value;
+    if (selectedDate) {
+        localStorage.setItem('selectedRecordDate', selectedDate);
+    }
+    
     return true;
 }
 
@@ -218,6 +283,58 @@ function saveExerciseRecords() {
         console.error('Error saving exercise records:', e);
     }
 }
+
+// Save exercise record to database
+function saveExerciseToDB(exerciseRecord, quarter, timeSlot, recordDate) {
+    try {
+        // Get user info from form
+        const nameInput = document.getElementById('name');
+        const participantIdInput = document.getElementById('participantId');
+        const genderInput = document.querySelector('input[name="gender"]:checked');
+        const ageInput = document.getElementById('age');
+        
+        if (!participantIdInput || !participantIdInput.value) {
+            console.warn('[DB] Missing participant ID, skipping database save');
+            return;
+        }
+        
+        const dbRecord = {
+            participant_id: participantIdInput.value,
+            name: nameInput ? nameInput.value : 'Unknown',
+            gender: genderInput ? genderInput.value : '',
+            age: ageInput ? parseInt(ageInput.value) : null,
+            record_date: recordDate,
+            quarter: quarter,
+            time_slot: timeSlot,
+            exercise_type: exerciseRecord.type,
+            intensity: exerciseRecord.intensity,
+            description: exerciseRecord.description
+        };
+        
+        // Send to API
+        fetch('/api/save-exercise', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dbRecord)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log(`[DB] Exercise saved successfully - ID: ${data.id}`);
+            } else {
+                console.error('[DB] Failed to save exercise:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('[DB] Error saving exercise:', error);
+        });
+    } catch (error) {
+        console.error('[DB] Exception while saving exercise:', error);
+    }
+}
+
 
 // Generate time string in HH:MM format
 function generateTimeString(hour, minute) {
@@ -418,6 +535,9 @@ window.submitExerciseRecord = function() {
         // Save to localStorage
         saveExerciseRecords();
         
+        // Save to database
+        saveExerciseToDB(exerciseRecord, currentQuarter, currentTimeSlot, selectedExerciseDate);
+        
         // Update UI
         renderTimeSlots(currentQuarter);
         
@@ -430,6 +550,7 @@ window.submitExerciseRecord = function() {
         // Show success message
         showSuccessMessage(`${type} 運動記錄已保存`);
     }
+
 };
 
 // Show success message
@@ -666,6 +787,9 @@ window.finishExerciseRecord = function() {
     
     localStorage.setItem('exerciseData', JSON.stringify(allRecords));
     
+    // Save daily summary to database
+    saveDailySummaryToDB(selectedExerciseDate, dailyActivityLevel, dailyActivityReason);
+
     // Check which days are remaining (exclude all days already completed)
     const remainingDates = [];
     const completedDates = [];
@@ -802,6 +926,23 @@ window.resetExercisePage = function() {
 
 // Go to meal tracking page (without clearing data)
 window.goToMealTracking = function() {
+    // Save user info before switching
+    const name = document.getElementById('name')?.value;
+    const participantId = document.getElementById('participantId')?.value;
+    const gender = document.querySelector('input[name="gender"]:checked')?.value;
+    const age = document.getElementById('age')?.value;
+    
+    if (name || participantId || gender || age) {
+        const userInfo = { name, participantId, gender, age };
+        localStorage.setItem('userInfo', JSON.stringify(userInfo));
+    }
+    
+    // Save selected date before switching
+    const selectedDate = document.querySelector('input[name="exerciseRecordDate"]:checked')?.value;
+    if (selectedDate) {
+        localStorage.setItem('selectedRecordDate', selectedDate);
+    }
+    
     window.location.href = 'form.html';
 };
 
@@ -824,3 +965,45 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+// Save daily exercise summary to database
+function saveDailySummaryToDB(recordDate, dailyActivityLevel, dailyActivityReason) {
+    try {
+        // Get user info from form
+        const participantIdInput = document.getElementById('participantId');
+        
+        if (!participantIdInput || !participantIdInput.value) {
+            console.warn('[DB] Missing participant ID, skipping database save');
+            return;
+        }
+        
+        const summaryRecord = {
+            participant_id: participantIdInput.value,
+            record_date: recordDate,
+            daily_activity_level: dailyActivityLevel,
+            daily_reason: dailyActivityReason,
+            notes: ''
+        };
+        
+        // Send to API
+        fetch('/api/save-daily-summary', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(summaryRecord)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log(`[DB] Daily summary saved successfully - ID: ${data.id}`);
+            } else {
+                console.error('[DB] Failed to save daily summary:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('[DB] Error saving daily summary:', error);
+        });
+    } catch (error) {
+        console.error('[DB] Exception while saving daily summary:', error);
+    }
+}

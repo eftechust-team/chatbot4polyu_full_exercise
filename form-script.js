@@ -1,3 +1,61 @@
+// Save user info to localStorage for cross-page persistence
+function saveUserInfoToStorage() {
+    const name = document.getElementById('name')?.value;
+    const participantId = document.getElementById('participantId')?.value;
+    const gender = document.querySelector('input[name="gender"]:checked')?.value;
+    const age = document.getElementById('age')?.value;
+    
+    if (name || participantId || gender || age) {
+        const userInfo = { name, participantId, gender, age };
+        localStorage.setItem('userInfo', JSON.stringify(userInfo));
+    }
+}
+
+// Load user info from localStorage
+function loadUserInfoFromStorage() {
+    const savedInfo = localStorage.getItem('userInfo');
+    if (savedInfo) {
+        try {
+            const userInfo = JSON.parse(savedInfo);
+            if (userInfo.name) document.getElementById('name').value = userInfo.name;
+            if (userInfo.participantId) document.getElementById('participantId').value = userInfo.participantId;
+            if (userInfo.gender) {
+                const genderRadio = document.querySelector(`input[name="gender"][value="${userInfo.gender}"]`);
+                if (genderRadio) genderRadio.checked = true;
+            }
+            if (userInfo.age) document.getElementById('age').value = userInfo.age;
+        } catch (e) {
+            console.error('Error loading user info:', e);
+        }
+    }
+}
+
+// Save selected date to localStorage
+function saveSelectedDate() {
+    const selectedDate = document.querySelector('input[name="recordDate"]:checked')?.value;
+    if (selectedDate) {
+        localStorage.setItem('selectedRecordDate', selectedDate);
+    }
+}
+
+// Load selected date from localStorage
+function loadSelectedDate() {
+    const savedDate = localStorage.getItem('selectedRecordDate');
+    if (savedDate) {
+        const dateRadio = document.querySelector(`input[name="recordDate"][value="${savedDate}"]`);
+        if (dateRadio && !document.querySelector('input[name="recordDate"]:checked')) {
+            dateRadio.checked = true;
+        }
+    }
+}
+
+// Go to exercise tracking page
+function goToExerciseTracking() {
+    saveUserInfoToStorage();
+    saveSelectedDate();
+    window.location.href = 'exercise.html';
+}
+
 // Handle skipping step 4 (no additional description needed)
 function skipStep4() {
     // Optionally, you can set a flag or update mealData to indicate no extra description
@@ -74,6 +132,31 @@ function skipStep4() {
         container.innerHTML = timeDropdowns.html;
     }
 }
+// Initialize page on load
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserInfoFromStorage();
+    loadSelectedDate();
+    
+    // Auto-save user info when fields change
+    ['name', 'participantId', 'age'].forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', saveUserInfoToStorage);
+            element.addEventListener('blur', saveUserInfoToStorage);
+        }
+    });
+    
+    // Auto-save gender selection
+    document.querySelectorAll('input[name="gender"]').forEach(radio => {
+        radio.addEventListener('change', saveUserInfoToStorage);
+    });
+    
+    // Auto-save date selection
+    document.querySelectorAll('input[name="recordDate"]').forEach(radio => {
+        radio.addEventListener('change', saveSelectedDate);
+    });
+});
+
 // Ask if user wants to upload more photos or continue
 function askMorePhotos() {
     const botMsg = document.createElement('div');
@@ -1968,6 +2051,9 @@ window.finalizeRecord = function(uniqueId) {
     chatMessagesEl.appendChild(botMsg);
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
     
+    // Save meal record to database
+    saveMealToDatabase(mealToRecord, finalData);
+
     // Update the records summary bubble if it exists
     setTimeout(() => {
         window.updateRecordsSummary();
@@ -2310,3 +2396,76 @@ window.updateRecordsSummary = function() {
 window.supplementRecords = function() {
     window.startNewRecord();
 }
+
+// Save meal record to database
+function saveMealToDatabase(mealName, mealData) {
+    try {
+        // Get user info from form
+        const nameInput = document.getElementById('name');
+        const participantIdInput = document.getElementById('participantId');
+        const genderInput = document.querySelector('input[name="gender"]:checked');
+        const ageInput = document.getElementById('age');
+        const recordDateSelect = document.getElementById('recordDate');
+        
+        if (!participantIdInput || !participantIdInput.value) {
+            console.warn('[DB] Missing participant ID, skipping database save');
+            return;
+        }
+        
+        // Get record date label
+        let recordDateValue = 'unknown';
+        if (recordDateSelect) {
+            const selectedOption = recordDateSelect.options[recordDateSelect.selectedIndex];
+            recordDateValue = selectedOption.value || recordDateSelect.value;
+        }
+        
+        // Get photo data (convert to base64 or reference URLs)
+        const photoData = [];
+        const photoDescriptions = [];
+        
+        if (mealData && mealData.photos && Array.isArray(mealData.photos)) {
+            mealData.photos.forEach((photo, index) => {
+                photoData.push(photo);  // Store base64 directly
+                photoDescriptions.push(mealData.descriptions && mealData.descriptions[index] ? mealData.descriptions[index] : '');
+            });
+        }
+        
+        const mealRecord = {
+            participant_id: participantIdInput.value,
+            name: nameInput ? nameInput.value : 'Unknown',
+            gender: genderInput ? genderInput.value : '',
+            age: ageInput ? parseInt(ageInput.value) : null,
+            record_date: recordDateValue,
+            meal_type: mealName,
+            meal_time: mealData && mealData.mealTime ? mealData.mealTime : '',
+            location: mealData && mealData.location ? mealData.location : '',
+            amount: mealData && mealData.amount ? mealData.amount : '',
+            additional_desc: mealData && mealData.additionalDesc ? mealData.additionalDesc : '',
+            photos: photoData,
+            photo_descriptions: photoDescriptions
+        };
+        
+        // Send to API
+        fetch('/api/save-meal', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(mealRecord)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log(`[DB] Meal saved successfully - ID: ${data.id}`);
+            } else {
+                console.error('[DB] Failed to save meal:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('[DB] Error saving meal:', error);
+        });
+    } catch (error) {
+        console.error('[DB] Exception while saving meal:', error);
+    }
+}
+
