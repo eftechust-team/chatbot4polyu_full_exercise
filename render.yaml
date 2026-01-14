@@ -9,4 +9,13 @@ services:
     startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.4
+        value: 3.11.4  
+  # PostgreSQL database service
+  - type: pserv
+    name: chatbot4polyu-db
+    env: postgres
+    region: singapore
+    plan: free
+    ipAllowList: []  # Allow access from all IPs
+    databaseName: chatbot_db
+    user: chatbot_user
