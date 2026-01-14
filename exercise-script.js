@@ -181,6 +181,9 @@ window.confirmExerciseDate = function() {
     // Show exercise quarters
     document.getElementById('exerciseQuartersContainer').style.display = 'block';
     
+    // Show summary section
+    document.getElementById('exerciseSummarySection').style.display = 'block';
+    
     // Render all quarters with existing data for this date
     renderTimeSlots('morning');
     renderTimeSlots('afternoon');
@@ -574,13 +577,6 @@ window.updateExerciseSummary = function() {
     }
     
     summaryContent.innerHTML = html || '<p style="color: #9ca3af;">未添加任何運動記錄</p>';
-    
-    // Show summary if there are records
-    if (types.length > 0) {
-        summarySection.style.display = 'block';
-    } else {
-        summarySection.style.display = 'none';
-    }
 };
 
 // Finish exercise record - show summary
