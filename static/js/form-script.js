@@ -576,7 +576,7 @@ window.handleImageUpload = function(event) {
                     botMsg.innerHTML = `
                         <div class="message-content">
                             <strong>第2步：對上傳的食物進行文字描述</strong><br>
-                            <span style="font-size: 13px; color: #666;">格式：食物-份量，以空格隔開。<br>例如：蘋果-100g 麵條-一碗 麵包-一拳</span>
+                            <span style="font-size: 13px; color: #666;">格式：食物-份量，多種食物之間用空格隔開。<br>例如：蘋果-100g 麵條-一碗 麵包-一拳</span>
                         </div>
                     `;
                     chatMessagesEl.appendChild(botMsg);
@@ -797,27 +797,19 @@ window.submitAdditionalInfo = function() {
     const location = document.querySelector('input[name="location"]:checked');
     const amount = document.querySelector('input[name="amount"]:checked');
 
-    if (!timePickerInput || !timePickerInput.value || !location || !amount) {
-        if (mealData.photos && mealData.photos.length > 0 && mealData.descriptions && mealData.descriptions.length > 0) {
-            const botMsg = document.createElement('div');
-            botMsg.className = 'bot-message';
-            botMsg.innerHTML = `
-                <div class="message-content">
-                    <strong>第4步：如有需要，補充描述</strong><br>
-                    <span class="step4-hint">（如果覺得照片無法完全體現，請簡單描述）</span>
-                    <div class="more-photos-buttons" style="margin-top:8px;">
-                        <button class="no-btn" onclick="skipStep4()">無</button>
-                    </div>
-                </div>
-            `;
-            chatMessagesEl.appendChild(botMsg);
-            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-            enableStep4Input();
-            return;
-        } else {
-            alert('請填寫所有必填資訊');
-            return;
-        }
+    if (!timePickerInput || !timePickerInput.value) {
+        alert('請填寫用餐時間');
+        return;
+    }
+    
+    if (!location) {
+        alert('請選擇用餐地點');
+        return;
+    }
+    
+    if (!amount) {
+        alert('請選擇進食情況');
+        return;
     }
     
     const mealTime = timePickerInput.value;

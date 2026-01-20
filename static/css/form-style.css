@@ -49,15 +49,18 @@
     background: #ffffff;
     border: 1px solid var(--border);
     color: var(--text);
-    padding: 15px;
+    padding: 12px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin: 0 auto 15px;
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     flex-wrap: wrap;
     gap: 10px;
+    width: 100%;
+    max-width: 1180px;
+    box-sizing: border-box;
 }
 
 .header-bar span {
@@ -91,6 +94,7 @@
     color: var(--accent);
     font-size: 20px;
     font-weight: 700;
+    margin: 0;
 }
 
 /* ===== FORM GROUPS ===== */
@@ -409,13 +413,13 @@
     color: #333;
     border: 1px solid #ddd;
     border-radius: 8px;
-    padding: 12px 10px;
+    padding: 10px 8px;
     text-align: center;
     cursor: pointer;
     font-size: 13px;
     transition: border-color 0.2s, box-shadow 0.2s, transform 0.1s;
     font-family: "Microsoft JhengHei", "PingFang HK", "Noto Sans TC", sans-serif;
-    min-height: 60px;
+    min-height: 50px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -637,7 +641,7 @@
 
 /* ===== UPLOADED IMAGES ===== */
 .uploaded-image {
-    max-width: 100%;
+    max-width: 250px;
     width: 100%;
     height: auto;
     border-radius: 10px;
