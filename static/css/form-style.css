@@ -268,11 +268,24 @@
 /* ===== CHAT INPUT AREA ===== */
 .chat-input-area {
     display: flex;
-    padding: 10px;
+    flex-direction: column;
+    padding: 15px;
     background-color: var(--card-bg);
     border-top: 1px solid var(--border);
     gap: 6px;
     flex-wrap: wrap;
+    width: 100%;
+}
+
+.chat-input-row {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.chat-buttons-row {
+    display: flex;
+    gap: 10px;
     width: 100%;
 }
 
@@ -322,7 +335,17 @@
 }
 
 .reset-btn {
-    background: #6b7280 !important;
+    flex: 1;
+    background: #6b7280;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 20px;
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: "Microsoft JhengHei", "PingFang HK", "Noto Sans TC", sans-serif;
 }
 
 .reset-btn:hover {
@@ -330,7 +353,26 @@
     background: #5a626d !important;
 }
 
-/* ===== ACTION BUTTONS ===== */
+.nav-btn {
+    flex: 1;
+    background: #6b7280;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: none;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: "Microsoft JhengHei", "PingFang HK", "Noto Sans TC", sans-serif;
+}
+
+.nav-btn:hover {
+    background: #5a626d;
+    transform: translateY(-2px);
+}
+
+/* Action buttons container */
 .action-buttons-container {
     display: flex;
     gap: 8px;
