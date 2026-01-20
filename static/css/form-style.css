@@ -17,10 +17,9 @@
 /* ===== BASE LAYOUT ===== */
 .form-container {
     width: 100%;
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 10px;
-    min-height: 120vh; /* Added */
 }
 
 .form-content {
@@ -31,7 +30,6 @@
     box-shadow: 0 12px 32px var(--shadow);
     border: 1px solid var(--border);
     width: 100%;
-    min-height: 120vh; /* Added */
 }
 
 /* Remove left/right sections - single column only */
@@ -44,14 +42,14 @@
     border: none;
     max-width: 100%;
     width: 100%;
-    min-height: 120vh; /* Added to make it longer */
 }
 
 /* ===== HEADER BAR ===== */
 .header-bar {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #ffffff;
+    border: 1px solid var(--border);
+    color: var(--text);
     padding: 15px;
-    color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -70,9 +68,9 @@
 }
 
 .logout-btn {
-    background: rgba(255,255,255,0.2);
-    border: 1px solid white;
-    color: white;
+    background: #ef4444;
+    border: none;
+    color: #ffffff;
     padding: 6px 16px;
     border-radius: 20px;
     cursor: pointer;
@@ -84,7 +82,7 @@
 }
 
 .logout-btn:hover {
-    background: rgba(255,255,255,0.3);
+    background: #dc2626;
     transform: translateY(-2px);
 }
 
@@ -206,8 +204,8 @@
 .chatbot-container {
     display: flex;
     flex-direction: column;
-    height: 80vh; /* Increased from 70vh */
-    max-height: 75vh;
+    min-height: 420px;
+    max-height: 65vh;
     border: 1px solid var(--border);
     border-radius: 10px;
     overflow: hidden;
@@ -781,7 +779,7 @@
     margin: 5% auto;
     padding: 20px;
     border: 1px solid #888;
-    border-radius: 15px;
+    border-radius: 20px;
     width: 90%;
     max-width: 600px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
@@ -789,6 +787,7 @@
     position: relative;
     max-height: 85vh;
     overflow-y: auto;
+    overflow-x: hidden;
 }
 
 @keyframes slideDown {
