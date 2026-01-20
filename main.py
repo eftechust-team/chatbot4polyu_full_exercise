@@ -121,6 +121,13 @@ def form_page():
     
     return render_template('form.html')
 
+@app.route('/exercise')
+def exercise_page():
+    # Check if user is logged in
+    if 'user_id' not in session:
+        return redirect(url_for('login_page'))
+    return render_template('exercise.html')
+
 @app.route('/api/save-meal-record', methods=['POST'])
 def save_meal_record():
     try:

@@ -22,6 +22,10 @@
     padding: 10px;
 }
 
+body.form-page {
+    padding-top: 100px;
+}
+
 .form-content {
     display: block;
     background: var(--card-bg);

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>運動記錄</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/form-style.css">
+</head>
+<body class="exercise-page">
+    <div class="top-bar">
+        <img src="/static/logo.jpeg" alt="Logo" style="max-height: 48px; height: auto; flex-shrink: 0;">
+        <div class="nav-switch">
+            <a href="/form" class="nav-btn">飲食記錄</a>
+            <a href="/exercise" class="nav-btn active">運動記錄</a>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
+            <span>歡迎，{{ session.get('name', '參與者') }} (編號: {{ session.get('participant_id', '') }})</span>
+            <button onclick="logout()" class="logout-btn">登出</button>
+        </div>
+    </div>
+
+    <div class="container" style="width: 100%; max-width: 1200px; margin: 0 auto;">
+        <div class="content">
+            <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 15px;">
+                <h2 class="section-title">運動記錄</h2>
+            </div>
+            <p>此頁面將稍後加入內容。</p>
+        </div>
+    </div>
+
+    <script>
+    async function logout() {
+        if (confirm('確定要登出嗎？')) {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const result = await response.json();
+                if (result.success) {
+                    window.location.href = result.redirect || '/login';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                window.location.href = '/login';
+            }
+        }
+    }
+    </script>
+</body>
+</html>

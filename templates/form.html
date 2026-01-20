@@ -8,19 +8,28 @@
     <link rel="stylesheet" href="/static/css/form-style.css">
 </head>
 <body class="form-page">
-     <!-- Header with user info and logout button -->
-    <div class="header-bar">
-        <span>歡迎，{{ session.get('name', '參與者') }} (編號: {{ session.get('participant_id', '') }})</span>
-        <button onclick="logout()" class="logout-btn">登出</button>
+    <div class="top-bar">
+        <img src="/static/logo.jpeg" alt="Logo" style="max-height: 48px; height: auto; flex-shrink: 0;">
+
+        <!-- Navigation switch: 飲食記錄 | 運動記錄 -->
+        <div class="nav-switch">
+            <a href="/form" class="nav-btn active">飲食記錄</a>
+            <a href="/exercise" class="nav-btn">運動記錄</a>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
+            <span>歡迎，{{ session.get('name', '參與者') }} (編號: {{ session.get('participant_id', '') }})</span>
+            <button onclick="logout()" class="logout-btn">登出</button>
+        </div>
     </div>
 
     <div class="form-container">
         <div class="form-content">
             <!-- Right Section: Chatbot Assistant (now full width) -->
             <div class="right-section">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                    <h2 class="section-title">記錄助手</h2>
-                    <button id="helpBtn" style="background: white; border: 2px solid var(--accent); color: var(--accent); width: 40px; height: 40px; padding: 0; box-sizing: border-box; border-radius: 50%; cursor: pointer; font-size: 18px; font-weight: bold; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">?</button>
+                <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 15px; position: relative;">
+                    <h2 class="section-title">飲食記錄</h2>
+                    <button id="helpBtn" style="background: white; border: 2px solid var(--accent); color: var(--accent); width: 40px; height: 40px; padding: 0; box-sizing: border-box; border-radius: 50%; cursor: pointer; font-size: 18px; font-weight: bold; transition: all 0.3s; display: flex; align-items: center; justify-content: center; position: absolute; right: 0;">?</button>
                 </div>
                 
                 <div class="chatbot-container">
