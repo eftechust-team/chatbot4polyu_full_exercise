@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>參與者登入</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/login-style.css">
+</head>
+<body>
+    <div class="auth-card">
+        <!-- LOGIN SECTION -->
+        <div id="loginSection">
+            <div class="auth-header">
+                <h2>系統登入</h2>
+                <p style="color: #666; font-size: 14px;">請輸入您的參與者編號</p>
+            </div>
+            <div id="loginError" class="error-msg"></div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>參與者編號 (ID)</label>
+                    <input type="text" id="loginId" class="form-control" placeholder="P-001" required>
+                </div>
+                <button type="submit" class="btn-primary" id="loginBtn">登入</button>
+            </form>
+            <div class="toggle-text">
+                第一次使用？ <span class="toggle-link" onclick="toggleView('register')">立即註冊</span>
+            </div>
+        </div>
+
+        <!-- REGISTER SECTION -->
+        <div id="registerSection" class="hidden">
+            <div class="auth-header">
+                <h2>註冊資料</h2>
+            </div>
+            <div id="registerError" class="error-msg"></div>
+            <form id="registerForm">
+                <div class="form-group">
+                    <label>1. 姓名</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>2. 參與者編號 (ID)</label>
+                    <input type="text" name="participant_id" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>3. 性別</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="gender" value="male" required> 男</label>
+                        <label><input type="radio" name="gender" value="female"> 女</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>4. 年齡</label>
+                    <input type="number" name="age" class="form-control" style="width: 100px;" required>
+                </div>
+                <button type="submit" class="btn-primary" id="regBtn">註冊並登入</button>
+            </form>
+            <div class="toggle-text">
+                已有帳號？ <span class="toggle-link" onclick="toggleView('login')">返回登入</span>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/login.js"></script>
+</body>
+</html>

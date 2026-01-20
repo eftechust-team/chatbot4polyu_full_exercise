@@ -1,4 +1,4 @@
-# Chatbot4PolyU - Diet Recording Application
+# Chatbot4PolyU - Diet Recording Application v2.0
 
 A web-based food/diet tracking application designed for the PolyU study. Users can record their daily meals with photos, descriptions, and timing information.
 
@@ -12,12 +12,12 @@ A web-based food/diet tracking application designed for the PolyU study. Users c
 - **Completion Tracking**: View daily progress and completion status
 - **Summary Reports**: View all recorded meals with statistics
 
-## Deployment on Render
+## Deployment on Gcloud APP Engine
 
-This application is deployed using Render's free tier with Python Flask.
+This application is deployed using gcloud app engine with Python Flask.
 
 ### Live Application
-Visit: [Your Render URL will be here after deployment]
+Visit: https://chatbot4polyu.df.r.appspot.com/
 
 ### Local Development
 
@@ -36,11 +36,12 @@ python -m venv .venv
 3. Install dependencies:
 ```bash
 pip install -r requirements.txt
+# you may need to delete 'httpx==0.27.0', which is for gcloud app deploy. 
 ```
 
 4. Run the Flask app:
 ```bash
-python app.py
+python main.py
 ```
 
 5. Open your browser and navigate to:
@@ -51,23 +52,42 @@ http://localhost:5000
 ## Project Structure
 
 ```
-├── app.py                  # Flask application server
-├── form.html              # Main form/chatbot interface
-├── form-script.js         # Main chatbot logic and meal recording
-├── form-style.css         # Form styling
-├── style.css              # General styling
-├── index.html             # Landing page
-├── requirements.txt       # Python dependencies
-├── Procfile              # Render deployment configuration
-└── README.md             # This file
+├── static/ # Static assets
+│ ├── css/ # Stylesheets
+│ │ ├── form-style.css # Form page styles
+│ │ ├── login-style.css # Login page styles
+│ │ └── style.css # Global styles
+│ │
+│ └── js/ # JavaScript files
+│ ├── form-script.js # Form page functionality
+│ ├── handlers_addition.js # Additional event handlers
+│ └── login.js # Login page functionality
+│
+├── templates/ # HTML templates
+│ ├── form.html # Main form/chatbot page
+│ ├── index.html # Landing page
+│ └── login.html # Login page
+│
+├── utils/ # Utility modules
+│ ├── check_braces.py # Syntax validation utilities
+│ ├── check_syntax.py # Code syntax checker
+│ └── detailed_check.py # Detailed validation checks
+│
+├── .gcloudignore # Google Cloud deployment exclusions
+├── .gitignore # Git exclusions
+├── app.yaml # Google Cloud App Engine configuration
+├── main.py # Flask application entry point
+├── README.md # Project documentation
+└── requirements.txt # Python dependencies
 ```
 
 ## Technology Stack
 
 - **Frontend**: HTML5, CSS3, JavaScript (vanilla)
 - **Backend**: Python Flask
-- **Deployment**: Render
+- **Deployment**: Gcloud APP Engine
 - **Version Control**: Git/GitHub
+- **Database**: Supabase
 
 ## Features in Detail
 
@@ -92,9 +112,66 @@ http://localhost:5000
 - Supplement records for current day
 - View all historical records
 
+### Database Structure
+
+-- Table 1: Users (participants)
+CREATE TABLE participants (
+    id INT8 PRIMARY KEY DEFAULT uuid_generate_v4(),
+    participant_id TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    gender TEXT CHECK (gender IN ('male', 'female')),
+    age INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+);
+
+-- Table 2: Daily Records (tracks each recording day)
+CREATE TABLE daily_records (
+    id INT8 PRIMARY KEY DEFAULT uuid_generate_v4(),
+    participant_id TEXT NOT NULL,
+    record_date TEXT NOT NULL, -- 'workday1', 'workday2', 'restday'
+    record_date_label TEXT, -- '第一個工作日', '第二個工作日', etc.
+    is_completed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(participant_id, record_date)
+);
+
+-- Table 3: Meal Records (each meal/snack entry)
+CREATE TABLE meal_records (
+    id INT8 PRIMARY KEY DEFAULT uuid_generate_v4(),
+    daily_record_id INT8 REFERENCES daily_records(id) ON DELETE CASCADE,
+    participant_id TEXT NOT NULL,
+    record_date TEXT NOT NULL,
+    meal_type TEXT NOT NULL, -- '早餐', '午餐', '晚餐', '上午加餐', etc.
+    meal_time TEXT, -- HH:mm format
+    location TEXT, -- '家', '工作單位', '餐廳/外賣', '其他'
+    eating_amount TEXT, -- '全部吃完', '剩餘一些', '只吃少量'
+    additional_description TEXT,
+    
+    -- Snack-specific fields
+    is_snack BOOLEAN DEFAULT FALSE,
+    snack_type TEXT, -- '水果', '零食', '飲料', '堅果', '甜品', '其他'
+    snack_name TEXT,
+    snack_amount TEXT,
+    
+    photo_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+);
+
+-- Table 4: Food Photos (stores photo data and descriptions)
+CREATE TABLE food_photos (
+    id INT8 PRIMARY KEY DEFAULT uuid_generate_v4(),
+    meal_record_id INT8 REFERENCES meal_records(id) ON DELETE CASCADE,
+    participant_id TEXT NOT NULL,
+    photo_data TEXT NOT NULL, -- base64 encoded image data
+    description TEXT, -- food description like "蘋果-100g 麵條-一碗"
+    photo_order INTEGER DEFAULT 0, -- order of photo in the meal
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() 
+);
+
 ## Notes
 
 - No backend database - data is stored in browser's JavaScript variables during session
 - Fully client-side form submission and data management
 - Mobile-friendly responsive design
 - Traditional Chinese language support
+

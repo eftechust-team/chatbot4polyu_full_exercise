@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>資料收集表格</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/form-style.css">
+</head>
+<body class="form-page">
+     <!-- Header with user info and logout button -->
+    <div class="header-bar">
+        <span>歡迎，{{ session.get('name', '參與者') }} (編號: {{ session.get('participant_id', '') }})</span>
+        <button onclick="logout()" class="logout-btn">登出</button>
+    </div>
+
+    <div class="form-container">
+        <div class="form-content">
+            <!-- Right Section: Chatbot Assistant (now full width) -->
+            <div class="right-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h2 class="section-title">記錄助手</h2>
+                    <button id="helpBtn" style="background: white; border: 2px solid var(--accent); color: var(--accent); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.3s;">?</button>
+                </div>
+                
+                <div class="chatbot-container">
+                    <div id="chatMessages" class="chat-messages">
+                        <div class="bot-message">
+                            <div class="message-content">
+                                <strong>記錄流程</strong><br>
+                                Step 1：選擇記錄日期<br>
+                                Step 2：選擇餐次記錄卡片<br>
+                                Step 3：拍照上傳您的飲食圖片並給出簡單的文字描述
+                            </div>
+                        </div>
+                        <div class="bot-message">
+                            <div class="message-content">
+                                <strong>記錄日期：</strong><br>
+                                <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
+                                    <label style="display: flex; align-items: center; cursor: pointer;">
+                                        <input type="radio" name="recordDate" value="workday1" style="margin-right: 8px;">
+                                        <span>第一個工作日</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; cursor: pointer;">
+                                        <input type="radio" name="recordDate" value="workday2" style="margin-right: 8px;">
+                                        <span>第二個工作日</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; cursor: pointer;">
+                                        <input type="radio" name="recordDate" value="restday" style="margin-right: 8px;">
+                                        <span>第一個休息日</span>
+                                    </label>
+                                </div>
+                                <button onclick="confirmDateSelection()" style="width: 100%; margin-top: 12px; padding: 8px; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: bold;">確認</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="chat-input-area">
+                        <input type="text" id="chatInput" placeholder="輸入訊息..." disabled>
+                        <button id="chatSend" disabled>發送</button>
+                        <button id="resetBtn" class="reset-btn">重新開始</button>
+                    </div>
+                    
+                    <div id="actionButtons" class="action-buttons-container" style="display: none; padding: 15px; gap: 10px; background-color: var(--card-bg); border-top: 1px solid var(--border);">
+                        <button class="action-btn new-record-btn" onclick="startNewRecord()">開始新記錄</button>
+                        <button class="action-btn finish-btn" onclick="finishDailyRecord()">完成今日飲食記錄</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Modal -->
+    <div id="faqModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 style="color: var(--accent); margin-bottom: 20px;">常見問題</h2>
+            
+            <div style="margin-bottom: 20px;">
+                <strong style="color: var(--text);">Q：如果忘記拍攝怎麼辦？</strong>
+                <p style="margin-top: 8px; color: var(--text-muted);">A：請儘量回憶並描述食物和大概分量。例如：「晚餐吃了外賣牛肉麵，大概一碗」。</p>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <strong style="color: var(--text);">Q：如何估算分量？（參照文檔鏈接）</strong>
+                <p style="margin-top: 8px; color: var(--text-muted);">A：簡單參照：<br>
+                1碗米飯≈200g<br>
+                1杯飲料≈250毫升</p>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <strong style="color: var(--text);">Q：包裝食品需要記錄什麼？</strong>
+                <p style="margin-top: 8px; color: var(--text-muted);">A：請拍攝包裝上的營養成分表。如果無法拍攝，請記錄品牌和產品名稱。</p>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <strong style="color: var(--text);">Q：調味料需要記錄嗎？</strong>
+                <p style="margin-top: 8px; color: var(--text-muted);">A：日常使用的油、鹽、醬料不需要特別記錄。但如果使用了較多（如很多沙拉醬），請備註說明。</p>
+            </div>
+            
+            <div style="background: var(--warning-bg); padding: 15px; border-radius: 8px; border-left: 4px solid var(--warning-border);">
+                <strong style="color: var(--text);">【聯繫方式】</strong><br>
+                <p style="margin-top: 8px; color: var(--text-muted);">如有問題，請聯繫：Miss Xu +825 51356879</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/form-script.js?v=20260113-format-hint"></script>
+     <script>
+    async function logout() {
+        if (confirm('確定要登出嗎？')) {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    window.location.href = result.redirect || '/login';
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                // Fallback: redirect anyway
+                window.location.href = '/login';
+            }
+        }
+    }
+    </script>
+</body>
+</html>
