@@ -301,5 +301,171 @@ def logout():
     session.clear()
     return jsonify({'success': True, 'redirect': '/login'})
 
+@app.route('/api/save-exercise-record', methods=['POST'])
+def save_exercise_record():
+    try:
+        # Check authentication
+        if 'participant_id' not in session:
+            return jsonify({'success': False, 'message': '請先登入'}), 401
+        
+        data = request.get_json()
+        participant_id = session['participant_id']
+        
+        # Extract data
+        record_date = data.get('record_date')
+        record_date_label = data.get('record_date_label')
+        start_time = data.get('start_time')
+        end_time = data.get('end_time')
+        exercise_type = data.get('exercise_type')
+        intensity = data.get('intensity')
+        description = data.get('description', '')
+        
+        # Validation
+        if not all([record_date, start_time, end_time, exercise_type, intensity]):
+            return jsonify({'success': False, 'message': '缺少必填資訊'}), 400
+        
+        # Create exercise record
+        exercise_record_data = {
+            'participant_id': participant_id,
+            'record_date': record_date,
+            'record_date_label': record_date_label,
+            'start_time': start_time,
+            'end_time': end_time,
+            'exercise_type': exercise_type,
+            'intensity': intensity,
+            'description': description if description else None
+        }
+        
+        print(f"Creating exercise record: {exercise_record_data}")
+        
+        exercise_response = supabase.table('exercise_records').insert(exercise_record_data).execute()
+        
+        if not exercise_response.data or len(exercise_response.data) == 0:
+            return jsonify({'success': False, 'message': '創建運動記錄失敗'}), 500
+        
+        exercise_record_id = int(exercise_response.data[0]['id'])
+        print(f"Created exercise record: {exercise_record_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': '運動記錄保存成功',
+            'exercise_record_id': exercise_record_id
+        })
+        
+    except Exception as e:
+        print(f"Save exercise record error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'保存記錄時發生錯誤: {str(e)}'}), 500
+
+@app.route('/api/get-exercise-records', methods=['GET'])
+def get_exercise_records():
+    try:
+        # Check authentication
+        if 'participant_id' not in session:
+            return jsonify({'success': False, 'message': '請先登入'}), 401
+        
+        participant_id = session['participant_id']
+        record_date = request.args.get('record_date')
+        
+        if not record_date:
+            return jsonify({'success': False, 'message': '缺少記錄日期'}), 400
+        
+        # Query exercise records
+        response = supabase.table('exercise_records')\
+            .select('*')\
+            .eq('participant_id', participant_id)\
+            .eq('record_date', record_date)\
+            .execute()
+        
+        return jsonify({
+            'success': True,
+            'records': response.data if response.data else []
+        })
+        
+    except Exception as e:
+        print(f"Get exercise records error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': f'獲取記錄時發生錯誤: {str(e)}'}), 500
+
+@app.route('/api/complete-exercise-day', methods=['POST'])
+def complete_exercise_day():
+    try:
+        # Check authentication
+        if 'participant_id' not in session:
+            return jsonify({'success': False, 'message': '請先登入'}), 401
+        
+        data = request.get_json()
+        participant_id = session['participant_id']
+        record_date = data.get('record_date')
+        
+        if not record_date:
+            return jsonify({'success': False, 'message': '缺少記錄日期'}), 400
+        
+        print(f"Completing exercise day for {participant_id}, {record_date}")
+        
+        # Update exercise records to mark as completed
+        # You might want to create an exercise_daily_records table similar to daily_records
+        # For now, we'll just return success
+        
+        return jsonify({'success': True, 'message': '運動記錄已完成'})
+        
+    except Exception as e:
+        print(f"Complete exercise day error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': '標記完成時發生錯誤'}), 500
+
+@app.route('/api/mark-no-exercise', methods=['POST'])
+def mark_no_exercise():
+    try:
+        # Check authentication
+        if 'participant_id' not in session:
+            return jsonify({'success': False, 'message': '請先登入'}), 401
+        
+        data = request.get_json()
+        participant_id = session['participant_id']
+        record_date = data.get('record_date')
+        record_date_label = data.get('record_date_label')
+        
+        if not record_date:
+            return jsonify({'success': False, 'message': '缺少記錄日期'}), 400
+        
+        print(f"Marking no exercise for {participant_id}, {record_date}")
+        
+        # Create a special "no exercise" record
+        no_exercise_data = {
+            'participant_id': participant_id,
+            'record_date': record_date,
+            'record_date_label': record_date_label,
+            'start_time': '00:00',
+            'end_time': '00:00',
+            'exercise_type': '無運動',
+            'intensity': '無',
+            'description': '本日無運動'
+        }
+        
+        # First delete any existing records for this date
+        delete_response = supabase.table('exercise_records')\
+            .delete()\
+            .eq('participant_id', participant_id)\
+            .eq('record_date', record_date)\
+            .execute()
+        
+        # Insert the no-exercise marker
+        insert_response = supabase.table('exercise_records').insert(no_exercise_data).execute()
+        
+        if not insert_response.data or len(insert_response.data) == 0:
+            return jsonify({'success': False, 'message': '標記失敗'}), 500
+        
+        return jsonify({'success': True, 'message': '已標記本日無運動'})
+        
+    except Exception as e:
+        print(f"Mark no exercise error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': '標記時發生錯誤'}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

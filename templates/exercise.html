@@ -25,28 +25,153 @@
             <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 15px;">
                 <h2 class="section-title">運動記錄</h2>
             </div>
-            <p>此頁面將稍後加入內容。</p>
+            
+            <!-- Date Selection Section -->
+            <div id="dateSection" class="exercise-section">
+                <h3 style="color: var(--text); font-size: 16px; margin-bottom: 12px;">請先選擇記錄日期：</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="exerciseDate" value="workday1" style="margin-right: 8px;">
+                        <span>第一個工作日</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="exerciseDate" value="workday2" style="margin-right: 8px;">
+                        <span>第二個工作日</span>
+                    </label>
+                    <label style="display: flex; align-items: center; cursor: pointer;">
+                        <input type="radio" name="exerciseDate" value="restday" style="margin-right: 8px;">
+                        <span>第一個休息日</span>
+                    </label>
+                </div>
+                <button onclick="confirmExerciseDate()" class="submit-info-btn" style="width: 120px; padding: 10px;">確認日期</button>
+            </div>
+
+            <!-- Exercise Entry Section (hidden initially) -->
+            <div id="exerciseEntrySection" class="exercise-section" style="display: none;">
+                <h3 id="exerciseEntryTitle" style="color: var(--text); font-size: 16px; margin-bottom: 12px;">添加運動記錄</h3>
+                
+                <div class="form-group">
+                    <label>運動時間：</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="time" id="exerciseStartTime" style="flex: 1; padding: 8px; border: 2px solid #ddd; border-radius: 8px;">
+                        <span>-</span>
+                        <input type="time" id="exerciseEndTime" style="flex: 1; padding: 8px; border: 2px solid #ddd; border-radius: 8px;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>運動類型：</label>
+                    <select id="exerciseType" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Microsoft JhengHei', 'PingFang HK', 'Noto Sans TC', sans-serif;">
+                        <option value="">請選擇運動類型</option>
+                        <option value="跑步">跑步</option>
+                        <option value="步行">步行</option>
+                        <option value="騎自行車">騎自行車</option>
+                        <option value="游泳">游泳</option>
+                        <option value="瑜伽">瑜伽</option>
+                        <option value="健身">健身</option>
+                        <option value="球類運動">球類運動</option>
+                        <option value="舞蹈">舞蹈</option>
+                        <option value="登山">登山</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>運動強度：</label>
+                    <select id="exerciseIntensity" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Microsoft JhengHei', 'PingFang HK', 'Noto Sans TC', sans-serif;">
+                        <option value="">請選擇運動強度</option>
+                        <option value="低強度">低強度（輕鬆，可以正常對話）</option>
+                        <option value="中強度">中強度（稍累，對話略困難）</option>
+                        <option value="高強度">高強度（很累，難以對話）</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>補充描述（可選）：</label>
+                    <textarea id="exerciseDescription" rows="3" placeholder="例如：步行1000步，跑步2km，瑜伽10min等" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Microsoft JhengHei', 'PingFang HK', 'Noto Sans TC', sans-serif; resize: vertical;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; flex-direction: column;">
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="addExerciseRecord()" class="submit-info-btn" style="padding: 12px 40px; flex: 1;">添加記錄</button>
+                        <button onclick="finishExerciseDay()" class="submit-info-btn" style="padding: 12px 40px; flex: 1; background: #10b981;">完成今日記錄</button>
+                    </div>
+                    <button onclick="markNoExercise()" class="submit-info-btn" style="padding: 12px 40px; background: #9ca3af; width: 100%;">填充未記錄時間為"無運動"</button>
+                </div>
+            </div>
+
+            <!-- Timeline Visualization Section (hidden initially) -->
+            <div id="timelineSection" class="exercise-section" style="display: none; margin-top: 25px;">
+                <h3 style="color: var(--text); font-size: 16px; margin-bottom: 12px;">今日運動時間軸</h3>
+                <div id="timelineContainer" style="position: relative; height: 80px; background: #f0f0f0; border-radius: 8px; overflow: hidden;">
+                    <!-- Timeline hours -->
+                    <div style="display: flex; justify-content: space-between; padding: 5px 10px; font-size: 11px; color: #666;">
+                        <span>00:00</span>
+                        <span>06:00</span>
+                        <span>12:00</span>
+                        <span>18:00</span>
+                        <span>24:00</span>
+                    </div>
+                    <!-- Exercise blocks will be added here dynamically -->
+                    <div id="timelineBlocks" style="position: relative; height: 50px; margin: 5px 0;"></div>
+                </div>
+                
+                <!-- Legend -->
+                <div id="timelineLegend" style="display: flex; flex-wrap: wrap; gap: 15px; margin-top: 15px; font-size: 13px;">
+                    <!-- Legend items will be added dynamically -->
+                </div>
+
+                <!-- Exercise List -->
+                <div id="exerciseList" style="margin-top: 20px;">
+                    <h4 style="color: var(--text); font-size: 15px; margin-bottom: 10px;">運動記錄列表</h4>
+                    <div id="exerciseItems"></div>
+                </div>
+            </div>
+
+            <!-- Summary Section -->
+            <div id="summarySection" class="exercise-section" style="display: none; text-align: center; margin-top: 25px;">
+                <div style="font-size: 22px; color: #10b981; font-weight: 700; margin-bottom: 10px;">✓ 記錄已保存</div>
+                <p style="color: var(--text); font-size: 18px; margin-bottom: 6px;">感謝您完成 <span id="summaryDateLabel" style="font-weight: 700;">這一天</span> 的運動記錄！</p>
+                <p style="color: var(--text); font-size: 16px; margin-bottom: 10px;">總共記錄：<strong id="summaryTotalCount">0</strong> 項運動</p>
+                <p style="color: #555; margin-bottom: 16px;">您的運動記錄已成功保存。</p>
+                <div id="summaryRemainingWrapper" style="margin: 15px 0;">
+                    <p id="summaryRemainingText" style="color: var(--text); font-weight: 600; margin-bottom: 8px;">還有 2 天需要記錄：</p>
+                    <ol id="summaryRemainingList" style="text-align: left; display: inline-block; color: #333; padding-left: 20px; margin: 0 auto;"></ol>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button onclick="returnToExerciseEditing()" class="submit-info-btn" style="flex: 1; padding: 12px; background: #9ca3af;">返回修改</button>
+                    <button onclick="continueNextExerciseDay()" class="submit-info-btn" style="flex: 1; padding: 12px; background: #10b981;">繼續記錄下一天</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script>
-    async function logout() {
-        if (confirm('確定要登出嗎？')) {
-            try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const result = await response.json();
-                if (result.success) {
-                    window.location.href = result.redirect || '/login';
-                }
-            } catch (error) {
-                console.error('Logout error:', error);
-                window.location.href = '/login';
-            }
-        }
-    }
-    </script>
+    <!-- Activity Level Modal -->
+    <div id="activityLevelModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; display: none;">
+        <div style="background: white; border-radius: 12px; padding: 30px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <h3 style="color: var(--text); font-size: 18px; margin-bottom: 20px; text-align: center;">以上活動量是</h3>
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+                <select id="activityLevel" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 15px; font-family: 'Microsoft JhengHei', 'PingFang HK', 'Noto Sans TC', sans-serif;">
+                    <option value="">請選擇活動量</option>
+                    <option value="少於平常">少於平常</option>
+                    <option value="平常">平常</option>
+                    <option value="多於平常">多於平常</option>
+                </select>
+            </div>
+
+            <div id="reasonSection" class="form-group" style="display: none; margin-bottom: 20px;">
+                <label style="color: var(--text); font-weight: 600; margin-bottom: 8px; display: block;">原因：</label>
+                <textarea id="activityReason" rows="3" style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-family: 'Microsoft JhengHei', 'PingFang HK', 'Noto Sans TC', sans-serif; resize: vertical;"></textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <button onclick="cancelActivityLevel()" class="submit-info-btn" style="flex: 1; padding: 12px; background: #9ca3af;">取消</button>
+                <button onclick="confirmActivityLevel()" class="submit-info-btn" style="flex: 1; padding: 12px; background: #10b981;">確認</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/exercise-script.js"></script>
 </body>
 </html>

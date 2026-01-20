@@ -576,7 +576,8 @@ window.handleImageUpload = function(event) {
                     botMsg.innerHTML = `
                         <div class="message-content">
                             <strong>第2步：對上傳的食物進行文字描述</strong><br>
-                            <span style="font-size: 13px; color: #666;">格式：食物-份量，多種食物之間用空格隔開。<br>例如：蘋果-100g 麵條-一碗 麵包-一拳</span>
+                            <span style="font-size: 13px; color: #666;">格式：食物-份量，多種食物之間用空格隔開。<br>例如：蘋果-100g 麵條-一碗 麵包-一拳</span><br>
+                            <a href="https://mp.weixin.qq.com/s?__biz=MzI1OTAwNDMxNw==&mid=2651449890&idx=1&sn=42698ec485f0a2f62da6109e7c9cb32e&chksm=f016f88ff6fa697bdd8dd9ab3eeada5de093f505c35fda97601cc08559e2088ec09f3b7e6739&scene=27" target="_blank" style="font-size: 13px; color: var(--accent); text-decoration: underline; cursor: pointer;">常見食物的重量</a>
                         </div>
                     `;
                     chatMessagesEl.appendChild(botMsg);
