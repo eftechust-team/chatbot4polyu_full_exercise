@@ -169,8 +169,7 @@ CREATE TABLE food_photos (
 );
 
 ## Notes
-
-- No backend database - data is stored in browser's JavaScript variables during session
+- Frontend UI design to be updated
 - Fully client-side form submission and data management
 - Mobile-friendly responsive design
 - Traditional Chinese language support

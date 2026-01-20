@@ -132,30 +132,6 @@ function skipStep4() {
         container.innerHTML = timeDropdowns.html;
     }
 }
-// Initialize page on load
-document.addEventListener('DOMContentLoaded', function() {
-    loadUserInfoFromStorage();
-    loadSelectedDate();
-    
-    // Auto-save user info when fields change
-    ['name', 'participantId', 'age'].forEach(id => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.addEventListener('change', saveUserInfoToStorage);
-            element.addEventListener('blur', saveUserInfoToStorage);
-        }
-    });
-    
-    // Auto-save gender selection
-    document.querySelectorAll('input[name="gender"]').forEach(radio => {
-        radio.addEventListener('change', saveUserInfoToStorage);
-    });
-    
-    // Auto-save date selection
-    document.querySelectorAll('input[name="recordDate"]').forEach(radio => {
-        radio.addEventListener('change', saveSelectedDate);
-    });
-});
 
 // Ask if user wants to upload more photos or continue
 function askMorePhotos() {
@@ -1164,12 +1140,7 @@ window.resetForm = function() {
     }
 };
 
-// Go to exercise tracking page (without clearing data)
-window.goToExerciseTracking = function() {
-    window.location.href = 'exercise.html';
-};
-
-// Start a new record (different from reset - keeps personal info and chat history)
+// Start new record
 window.startNewRecord = function() {
     userSelectionMsgEl = null;
     uploadPromptShown = false;
@@ -1470,10 +1441,6 @@ window.finalizeRecord = function(uniqueId) {
     chatMessagesEl.appendChild(botMsg);
     chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
     
-    // Save meal record to database
-    saveMealToDatabase(mealToRecord, finalData);
-
-    // Update the records summary bubble if it exists
     setTimeout(() => {
         window.updateRecordsSummary();
     }, 100);
@@ -1867,75 +1834,135 @@ window.supplementRecords = function() {
     window.startNewRecord();
 }
 
-// Save meal record to database
-function saveMealToDatabase(mealName, mealData) {
+// API Functions for saving to database
+
+// Save a single meal record to database
+async function saveMealToDatabase(mealRecord, recordDate, recordDateLabel) {
     try {
-        // Get user info from form
-        const nameInput = document.getElementById('name');
-        const participantIdInput = document.getElementById('participantId');
-        const genderInput = document.querySelector('input[name="gender"]:checked');
-        const ageInput = document.getElementById('age');
-        const recordDateSelect = document.getElementById('recordDate');
-        
-        if (!participantIdInput || !participantIdInput.value) {
-            console.warn('[DB] Missing participant ID, skipping database save');
-            return;
-        }
-        
-        // Get record date label
-        let recordDateValue = 'unknown';
-        if (recordDateSelect) {
-            const selectedOption = recordDateSelect.options[recordDateSelect.selectedIndex];
-            recordDateValue = selectedOption.value || recordDateSelect.value;
-        }
-        
-        // Get photo data (convert to base64 or reference URLs)
-        const photoData = [];
-        const photoDescriptions = [];
-        
-        if (mealData && mealData.photos && Array.isArray(mealData.photos)) {
-            mealData.photos.forEach((photo, index) => {
-                photoData.push(photo);  // Store base64 directly
-                photoDescriptions.push(mealData.descriptions && mealData.descriptions[index] ? mealData.descriptions[index] : '');
-            });
-        }
-        
-        const mealRecord = {
-            participant_id: participantIdInput.value,
-            name: nameInput ? nameInput.value : 'Unknown',
-            gender: genderInput ? genderInput.value : '',
-            age: ageInput ? parseInt(ageInput.value) : null,
-            record_date: recordDateValue,
-            meal_type: mealName,
-            meal_time: mealData && mealData.mealTime ? mealData.mealTime : '',
-            location: mealData && mealData.location ? mealData.location : '',
-            amount: mealData && mealData.amount ? mealData.amount : '',
-            additional_desc: mealData && mealData.additionalDesc ? mealData.additionalDesc : '',
-            photos: photoData,
-            photo_descriptions: photoDescriptions
+        const photos = mealRecord.photos.map((photo, index) => ({
+            photo_data: photo,
+            description: mealRecord.descriptions[index] || ''
+        }));
+
+        const payload = {
+            record_date: recordDate,
+            record_date_label: recordDateLabel,
+            meal_type: mealRecord.name,
+            meal_time: mealRecord.mealTime || '',
+            location: mealRecord.location || '',
+            eating_amount: mealRecord.amount || '',
+            additional_description: mealRecord.additionalDesc || '',
+            is_snack: mealRecord.snackType ? true : false,
+            snack_type: mealRecord.snackType || '',
+            snack_name: mealRecord.snackName || '',
+            snack_amount: mealRecord.snackAmount || '',
+            photos: photos
         };
-        
-        // Send to API
-        fetch('/api/save-meal', {
+
+        const response = await fetch('/api/save-meal-record', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(mealRecord)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                console.log(`[DB] Meal saved successfully - ID: ${data.id}`);
-            } else {
-                console.error('[DB] Failed to save meal:', data.error);
-            }
-        })
-        .catch(error => {
-            console.error('[DB] Error saving meal:', error);
+            body: JSON.stringify(payload)
         });
+
+        const result = await response.json();
+        
+        if (!result.success) {
+            console.error('Failed to save meal record:', result.message);
+            return false;
+        }
+        
+        console.log('Meal record saved successfully:', result);
+        return true;
+        
     } catch (error) {
-        console.error('[DB] Exception while saving meal:', error);
+        console.error('Error saving meal record:', error);
+        return false;
     }
 }
 
+// Mark daily record as completed
+async function completeDailyRecordInDatabase(recordDate) {
+    try {
+        const response = await fetch('/api/complete-daily-record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                record_date: recordDate
+            })
+        });
+
+        const result = await response.json();
+        
+        if (!result.success) {
+            console.error('Failed to complete daily record:', result.message);
+            return false;
+        }
+        
+        console.log('Daily record marked as completed:', result);
+        return true;
+        
+    } catch (error) {
+        console.error('Error completing daily record:', error);
+        return false;
+    }
+}
+
+// Modified finalizeRecord function to save to database
+const originalFinalizeRecord = window.finalizeRecord;
+window.finalizeRecord = async function(uniqueId) {
+    // Call original function first
+    originalFinalizeRecord(uniqueId);
+    
+    // Get current record date info
+    const recordDateSelect = document.getElementById('recordDate');
+    if (!recordDateSelect || !recordDateSelect.value) {
+        console.error('No record date selected');
+        return;
+    }
+    
+    const recordDate = recordDateSelect.value;
+    const recordDateLabel = recordDateSelect.options[recordDateSelect.selectedIndex].text;
+    
+    // Get the meal record that was just finalized
+    const editMealType = uniqueId ? document.getElementById(`editMealType_${uniqueId}`) : document.querySelector('[id^="editMealType"]');
+    const mealToRecord = editMealType ? editMealType.value : currentMealName;
+    
+    // Get the finalized meal data from recordedMeals
+    const mealRecord = recordedMeals[mealToRecord];
+    
+    if (!mealRecord) {
+        console.error('No meal record found for:', mealToRecord);
+        return;
+    }
+    
+    // Handle array (snacks) or single record
+    if (Array.isArray(mealRecord)) {
+        // Save the last snack record added
+        const lastSnack = mealRecord[mealRecord.length - 1];
+        await saveMealToDatabase(lastSnack, recordDate, recordDateLabel);
+    } else {
+        // Save single meal record
+        await saveMealToDatabase(mealRecord, recordDate, recordDateLabel);
+    }
+};
+
+// Modified continueNextDay to mark daily record as completed
+const originalContinueNextDay = window.continueNextDay;
+window.continueNextDay = async function() {
+    const recordDateSelect = document.getElementById('recordDate');
+    
+    if (recordDateSelect && recordDateSelect.value) {
+        const recordDate = recordDateSelect.value;
+        
+        // Mark as completed in database
+        await completeDailyRecordInDatabase(recordDate);
+    }
+    
+    // Call original function
+    originalContinueNextDay();
+};
