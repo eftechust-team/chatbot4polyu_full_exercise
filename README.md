@@ -168,9 +168,17 @@ CREATE TABLE food_photos (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() 
 );
 
+### Participant Report
+```bash
+pip install reportlab psycopg2-binary Pillow
+python /utils/geberate_participant_report.py
+```
+Input the participant_id accordingly and generated pdf will be stored under /utils/data.
+
 ## Notes
 - Frontend UI design to be updated
 - Fully client-side form submission and data management
 - Mobile-friendly responsive design
 - Traditional Chinese language support
 
+<!-- reportlab psycopg2-binary Pillow matplotlib -->
