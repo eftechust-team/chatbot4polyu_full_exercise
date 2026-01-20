@@ -181,4 +181,7 @@ Input the participant_id accordingly and generated pdf will be stored under /uti
 - Mobile-friendly responsive design
 - Traditional Chinese language support
 
-<!-- reportlab psycopg2-binary Pillow matplotlib -->
+## To-do
+- register with passwd and user id
+- integrate with fitness
+- clean database
