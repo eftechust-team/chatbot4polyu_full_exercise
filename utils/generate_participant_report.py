@@ -396,7 +396,7 @@ class SupabaseDietaryReportGenerator:
                 ]
                 
                 for label, value in summary_items:
-                    story.append(Paragraph(f'• {label}：{value}', styles['ChineseNormal']))
+                    story.append(Paragraph(f'{label}：{value}', styles['ChineseNormal']))
                     story.append(Spacer(1, 0.15*cm))
                 
                 # Exercise summary
@@ -412,11 +412,11 @@ class SupabaseDietaryReportGenerator:
                     ]
                     
                     for label, value in exercise_summary_items:
-                        story.append(Paragraph(f'• {label}：{value}', styles['ChineseNormal']))
+                        story.append(Paragraph(f'{label}：{value}', styles['ChineseNormal']))
                         story.append(Spacer(1, 0.15*cm))
                     
                     if exercise_type_counts:
-                        story.append(Paragraph('• 運動類型分佈：', styles['ChineseNormal']))
+                        story.append(Paragraph('運動類型分佈：', styles['ChineseNormal']))
                         for ex_type, count in sorted(exercise_type_counts.items(), key=lambda x: x[1], reverse=True):
                             story.append(Paragraph(f'　　{ex_type}：{count}次', styles['ChineseSmall']))
                             story.append(Spacer(1, 0.1*cm))

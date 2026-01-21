@@ -119,9 +119,10 @@ CREATE TABLE participants (
     id INT8 PRIMARY KEY DEFAULT uuid_generate_v4(),
     participant_id TEXT UNIQUE NOT NULL,
     name TEXT NOT NULL,
+    password TEXT NOT NULL,
     gender TEXT CHECK (gender IN ('male', 'female')),
     age INTEGER,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Table 2: Daily Records (tracks each recording day)
@@ -199,7 +200,8 @@ CREATE TABLE exercise_records (
 ### Participant Report
 ```bash
 pip install reportlab psycopg2-binary Pillow
-python /utils/geberate_participant_report.py
+cd utils
+python generate_participant_report.py
 ```
 Input the participant_id accordingly and generated pdf will be stored under /utils/data.
 

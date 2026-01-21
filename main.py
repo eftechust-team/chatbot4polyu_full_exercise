@@ -49,9 +49,10 @@ def login():
     try:
         data = request.get_json()
         participant_id = data.get('participant_id', '').strip()
+        password = data.get('password', '')
         
-        if not participant_id:
-            return jsonify({'success': False, 'message': '請輸入參與者編號'}), 400
+        if not participant_id or not password:
+            return jsonify({'success': False, 'message': '請輸入參與者編號和密碼'}), 400
         
         # Query Supabase
         response = supabase.table('participants').select('*').eq('participant_id', participant_id).execute()
@@ -60,6 +61,18 @@ def login():
             return jsonify({'success': False, 'message': '找不到此編號，請先註冊。'}), 404
         
         user = response.data[0]
+        
+        # Verify password
+        if user.get('password') != password:
+            return jsonify({'success': False, 'message': '密碼錯誤'}), 401
+        
+        # Check if profile is complete (name, gender, age must not be null)
+        if not user.get('name') or not user.get('gender') or not user.get('age'):
+            return jsonify({
+                'success': False, 
+                'message': '您的資料不完整，請先完成註冊',
+                'incomplete_profile': True
+            }), 400
         
         # Save to Flask session
         session['user_id'] = user['id']
@@ -80,15 +93,60 @@ def register():
         new_user = {
             'name': data.get('name', '').strip(),
             'participant_id': data.get('participant_id', '').strip(),
+            'password': data.get('password', ''),
             'gender': data.get('gender'),
             'age': int(data.get('age', 0))
         }
         
         # Validation
-        if not all([new_user['name'], new_user['participant_id'], new_user['gender'], new_user['age']]):
+        if not all([new_user['name'], new_user['participant_id'], new_user['password'], new_user['gender'], new_user['age']]):
             return jsonify({'success': False, 'message': '請填寫所有欄位'}), 400
         
-        # Insert into Supabase
+        # Check if participant_id already exists
+        existing = supabase.table('participants').select('*').eq('participant_id', new_user['participant_id']).execute()
+        
+        if existing.data and len(existing.data) > 0:
+            # Participant exists
+            existing_user = existing.data[0]
+            
+            # Verify password
+            if existing_user.get('password') != new_user['password']:
+                return jsonify({'success': False, 'message': '此編號已註冊但密碼錯誤'}), 401
+            
+            # Check if profile is complete
+            if existing_user.get('name') and existing_user.get('gender') and existing_user.get('age'):
+                # Profile is complete, just login
+                session['user_id'] = existing_user['id']
+                session['participant_id'] = existing_user['participant_id']
+                session['name'] = existing_user['name']
+                
+                return jsonify({'success': True, 'message': '登入成功', 'redirect': '/form'})
+            else:
+                # Profile incomplete, update it
+                update_data = {
+                    'name': new_user['name'],
+                    'gender': new_user['gender'],
+                    'age': new_user['age']
+                }
+                
+                update_response = supabase.table('participants')\
+                    .update(update_data)\
+                    .eq('participant_id', new_user['participant_id'])\
+                    .execute()
+                
+                if not update_response.data:
+                    return jsonify({'success': False, 'message': '更新資料失敗'}), 500
+                
+                updated_user = update_response.data[0]
+                
+                # Login after updating profile
+                session['user_id'] = updated_user['id']
+                session['participant_id'] = updated_user['participant_id']
+                session['name'] = updated_user['name']
+                
+                return jsonify({'success': True, 'message': '註冊成功', 'redirect': '/form'})
+        
+        # New participant - insert
         response = supabase.table('participants').insert(new_user).execute()
         
         if not response.data:
@@ -106,11 +164,6 @@ def register():
     except Exception as e:
         error_msg = str(e)
         print(f"Register error: {error_msg}")
-        
-        # Handle duplicate participant_id
-        if 'duplicate key' in error_msg.lower() or '23505' in error_msg:
-            return jsonify({'success': False, 'message': '此編號已被註冊，請直接登入。'}), 409
-        
         return jsonify({'success': False, 'message': '註冊失敗，請稍後再試'}), 500
 
 @app.route('/form')
