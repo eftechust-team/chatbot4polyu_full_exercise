@@ -117,29 +117,29 @@
     
 
     <script src="/static/js/form-script.js?v=20260113-format-hint"></script>
-     <script>
-    async function logout() {
-        if (confirm('確定要登出嗎？')) {
-            try {
-                const response = await fetch('/api/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
+    <script>
+        async function logout() {
+            if (confirm('確定要登出嗎？')) {
+                try {
+                    const response = await fetch('/api/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        window.location.href = result.redirect || '/login';
                     }
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    window.location.href = result.redirect || '/login';
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    // Fallback: redirect anyway
+                    window.location.href = '/login';
                 }
-            } catch (error) {
-                console.error('Logout error:', error);
-                // Fallback: redirect anyway
-                window.location.href = '/login';
             }
         }
-    }
     </script>
 </body>
 </html>
