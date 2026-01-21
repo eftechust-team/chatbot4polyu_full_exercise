@@ -260,6 +260,8 @@ let mealData = {
     photoCount: 0,
     photos: [],
     descriptions: [],
+    photoBatchIndices: [], // Track which images belong to which batch
+    currentBatchIndex: -1, // Current batch index
     mealTime: '',
     location: '',
     amount: '',
@@ -454,12 +456,12 @@ function showUploadPrompt(mealName) {
     botMsg.innerHTML = `
         <div class="message-content">
             <strong>第1步：上傳照片</strong><br>
-            請拍攝您的${mealName}：<br>
+            請上傳食物照片。若為包裝食品，請上傳食物包裝以及營養成分表<br>
             <div class="upload-buttons">
                 <button class="upload-btn" onclick="openCamera()">📷 點擊拍照</button>
                 <button class="upload-btn" onclick="document.getElementById('galleryInput').click()">🖼️ 選擇照片</button>
             </div>
-            <input type="file" id="galleryInput" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="handleImageUpload(event)">
+            <input type="file" id="galleryInput" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp" multiple style="display:none;" onchange="handleImageUpload(event)">
             <div class="photo-tips">
                 <strong>【拍攝提示】</strong><br>
                 • 將食物放在碗、盤或杯中拍攝<br>
@@ -479,12 +481,12 @@ function showUploadPromptNoDivider() {
     botMsg.innerHTML = `
         <div class="message-content">
             <strong>第1步：上傳照片</strong><br>
-            請拍攝您的食物：<br>
+            請上傳食物照片。若為包裝食品，請上傳食物包裝以及營養成分表<br>
             <div class="upload-buttons">
                 <button class="upload-btn" onclick="openCamera()">📷 點擊拍照</button>
                 <button class="upload-btn" onclick="document.getElementById('galleryInput2').click()">🖼️ 選擇照片</button>
             </div>
-            <input type="file" id="galleryInput2" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="handleImageUpload(event)">
+            <input type="file" id="galleryInput2" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp" multiple style="display:none;" onchange="handleImageUpload(event)">
             <div class="photo-tips">
                 <strong>【拍攝提示】</strong><br>
                 • 將食物放在碗、盤或杯中拍攝<br>
@@ -552,73 +554,84 @@ window.closeCamera = function() {
 
 // Handle image upload
 window.handleImageUpload = function(event) {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const userMsg = document.createElement('div');
-            userMsg.className = 'user-message';
-            userMsg.innerHTML = `
-                <div class="message-content">
-                    <img src="${e.target.result}" alt="上傳的照片" class="uploaded-image">
-                </div>
-            `;
-            chatMessagesEl.appendChild(userMsg);
-            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-            
-            mealData.photoCount++;
-            mealData.photos.push(e.target.result);
-            
-            setTimeout(() => {
-                if (currentFlow === 'main') {
-                    const botMsg = document.createElement('div');
-                    botMsg.className = 'bot-message';
-                    botMsg.innerHTML = `
-                        <div class="message-content">
-                            <strong>第2步：對上傳的食物進行文字描述</strong><br>
-                            <span style="font-size: 13px; color: #666;">格式：食物-份量，多種食物之間用空格隔開。<br>例如：蘋果-100g 麵條-一碗 麵包-一拳</span><br>
-                            <a href="https://mp.weixin.qq.com/s?__biz=MzI1OTAwNDMxNw==&mid=2651449890&idx=1&sn=42698ec485f0a2f62da6109e7c9cb32e&chksm=f016f88ff6fa697bdd8dd9ab3eeada5de093f505c35fda97601cc08559e2088ec09f3b7e6739&scene=27" target="_blank" style="font-size: 13px; color: var(--accent); text-decoration: underline; cursor: pointer;">常見食物的重量</a>
-                        </div>
-                    `;
-                    chatMessagesEl.appendChild(botMsg);
-                    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-                    enableChatInput();
-                } else if (currentFlow === 'snack') {
-                    const botMsg = document.createElement('div');
-                    botMsg.className = 'bot-message';
-                    botMsg.innerHTML = `
-                        <div class="message-content">
-                            <strong>詳細資訊：</strong><br><br>
-                            <div class="info-form">
-                                <div class="info-field">
-                                    <label>1. 進食時間：</label>
-                                    <div id="snackTimeContainer"></div>
+    const files = event.target.files;
+    if (files && files.length > 0) {
+        let filesProcessed = 0;
+        const totalFiles = files.length;
+        
+        // Process each file
+        Array.from(files).forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const userMsg = document.createElement('div');
+                userMsg.className = 'user-message';
+                userMsg.innerHTML = `
+                    <div class="message-content">
+                        <img src="${e.target.result}" alt="上傳的照片 ${index + 1}" class="uploaded-image">
+                    </div>
+                `;
+                chatMessagesEl.appendChild(userMsg);
+                chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+                
+                mealData.photoCount++;
+                mealData.photos.push(e.target.result);
+                
+                filesProcessed++;
+                
+                // Only show next step after all files are processed
+                if (filesProcessed === totalFiles) {
+                    setTimeout(() => {
+                        if (currentFlow === 'main') {
+                            const botMsg = document.createElement('div');
+                            botMsg.className = 'bot-message';
+                            botMsg.innerHTML = `
+                                <div class="message-content">
+                                    <strong>第2步：對上傳的食物進行文字描述</strong><br>
+                                    <span style="font-size: 13px; color: #666;">格式：食物-份量，多種食物之間用空格隔開。<br>例如：蘋果-100g 麵條-一碗 麵包-一拳</span><br>
+                                    <a href="https://mp.weixin.qq.com/s?__biz=MzI1OTAwNDMxNw==&mid=2651449890&idx=1&sn=42698ec485f0a2f62da6109e7c9cb32e&chksm=f016f88ff6fa697bdd8dd9ab3eeada5de093f505c35fda97601cc08559e2088ec09f3b7e6739&scene=27" target="_blank" style="font-size: 13px; color: var(--accent); text-decoration: underline; cursor: pointer;">常見食物的重量</a>
                                 </div>
-                                <div class="info-field">
-                                    <label>2. 食物名稱：</label>
-                                    <input type="text" id="snackName" class="text-input" placeholder="如：蘋果、餅乾、礦泉水">
+                            `;
+                            chatMessagesEl.appendChild(botMsg);
+                            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+                            enableChatInput();
+                        } else if (currentFlow === 'snack') {
+                            const botMsg = document.createElement('div');
+                            botMsg.className = 'bot-message';
+                            botMsg.innerHTML = `
+                                <div class="message-content">
+                                    <strong>詳細資訊：</strong><br><br>
+                                    <div class="info-form">
+                                        <div class="info-field">
+                                            <label>1. 進食時間：</label>
+                                            <div id="snackTimeContainer"></div>
+                                        </div>
+                                        <div class="info-field">
+                                            <label>2. 食物名稱：</label>
+                                            <input type="text" id="snackName" class="text-input" placeholder="如：蘋果、餅乾、礦泉水">
+                                        </div>
+                                        <div class="info-field">
+                                            <label>3. 估計分量：</label>
+                                            <input type="text" id="snackAmount" class="text-input" placeholder="如：1個蘋果、半包餅乾">
+                                        </div>
+                                        <button class="submit-info-btn" onclick="submitSnackDetails()">提交</button>
+                                    </div>
                                 </div>
-                                <div class="info-field">
-                                    <label>3. 估計分量：</label>
-                                    <input type="text" id="snackAmount" class="text-input" placeholder="如：1個蘋果、半包餅乾">
-                                </div>
-                                <button class="submit-info-btn" onclick="submitSnackDetails()">提交</button>
-                            </div>
-                        </div>
-                    `;
-                    chatMessagesEl.appendChild(botMsg);
-                    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-                    
-                    const timeDropdowns = generateTimeDropdowns(currentRecordData.mealTime, 'snackTime');
-                    const containers = document.querySelectorAll('#snackTimeContainer');
-                    const container = containers.length > 0 ? containers[containers.length - 1] : null;
-                    if (container) {
-                        container.innerHTML = timeDropdowns.html;
-                    }
+                            `;
+                            chatMessagesEl.appendChild(botMsg);
+                            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+                            
+                            const timeDropdowns = generateTimeDropdowns(currentRecordData.mealTime, 'snackTime');
+                            const containers = document.querySelectorAll('#snackTimeContainer');
+                            const container = containers.length > 0 ? containers[containers.length - 1] : null;
+                            if (container) {
+                                container.innerHTML = timeDropdowns.html;
+                            }
+                        }
+                    }, 500);
                 }
-            }, 500);
-        };
-        reader.readAsDataURL(file);
+            };
+            reader.readAsDataURL(file);
+        });
     }
 };
 
@@ -673,12 +686,12 @@ function showSnackUploadPrompt() {
     botMsg.innerHTML = `
         <div class="message-content">
             <strong>第1步：上傳照片</strong><br>
-            請拍攝您的加餐：<br>
+            請上傳食物照片。若為包裝食品，請上傳食物包裝以及營養成分表<br>
             <div class="upload-buttons">
                 <button class="upload-btn" onclick="openCamera()">📷 點擊拍照</button>
                 <button class="upload-btn" onclick="document.getElementById('snackGalleryInput').click()">🖼️ 選擇照片</button>
             </div>
-            <input type="file" id="snackGalleryInput" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="handleImageUpload(event)">
+            <input type="file" id="snackGalleryInput" accept=".jpg,.jpeg,.png,.gif,.webp,image/jpeg,image/png,image/gif,image/webp" multiple style="display:none;" onchange="handleImageUpload(event)">
             <div class="photo-tips">
                 <strong>【拍攝提示】</strong><br>
                 • 將食物放在碗、盤或杯中拍攝<br>
@@ -747,7 +760,15 @@ window.submitSnackDetails = function() {
                 <option value="晚餐" ${currentMealName === '晚餐' ? 'selected' : ''}>晚餐</option>
                 <option value="晚上加餐" ${currentMealName === '晚上加餐' ? 'selected' : ''}>晚上加餐</option>
             </select><br>
-            <strong>加餐類型：</strong><input type="text" id="editSnackType_${uniqueId}" value="${snackType}" style="padding: 5px; border: 1px solid #ccc; border-radius: 5px; width: 100%;"><br>
+            <strong>加餐類型：</strong>
+            <select id="editSnackType_${uniqueId}" style="padding: 5px; border: 1px solid #ccc; border-radius: 5px; width: 100%;">
+                <option value="水果" ${snackType === '水果' ? 'selected' : ''}>水果</option>
+                <option value="零食" ${snackType === '零食' ? 'selected' : ''}>零食</option>
+                <option value="飲料" ${snackType === '飲料' ? 'selected' : ''}>飲料</option>
+                <option value="堅果" ${snackType === '堅果' ? 'selected' : ''}>堅果</option>
+                <option value="甜品" ${snackType === '甜品' ? 'selected' : ''}>甜品</option>
+                <option value="其他" ${snackType === '其他' ? 'selected' : ''}>其他</option>
+            </select><br>
             <strong>已上傳照片：</strong>
             ${mealData.photos.map((photo, i) => `<br><img src="${photo}" alt="照片 ${i + 1}" class="uploaded-image" style="margin:8px 0;">`).join('')}<br>
             <strong>進食時間：</strong><div id="editSnackTimeContainer_${uniqueId}" style="display: inline-block;"></div><br>
@@ -907,12 +928,16 @@ function enableStep4Input() {
                     <option value="晚上加餐" ${currentMealName === '晚上加餐' ? 'selected' : ''}>晚上加餐</option>
                 </select><br>
                 <br><strong>已上傳照片及描述：</strong>
-                ${mealData.photos.map((photo, i) => `
+                ${mealData.photos.map((photo, i) => {
+                    const batchIdx = mealData.photoBatchIndices[i] !== undefined ? mealData.photoBatchIndices[i] : 0;
+                    const descValue = mealData.descriptions && mealData.descriptions[batchIdx] ? mealData.descriptions[batchIdx] : '';
+                    return `
                     <div style="margin:8px 0;">
                         <img src="${photo}" alt="照片 ${i + 1}" class="uploaded-image">
-                        <br><textarea id="desc${i}_${uniqueId}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; font-size: 12px;" rows="2">${mealData.descriptions[i]}</textarea>
+                        <br><textarea id="desc${i}_${uniqueId}" style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 5px; font-family: inherit; font-size: 12px;" rows="2">${descValue || ''}</textarea>
                     </div>
-                `).join('')}
+                `;
+                }).join('')}
                 <strong>用餐時間：</strong><div id="editMealTimeContainer_${uniqueId}" style="display: inline-block;"></div><br>
                 <strong>用餐地點：</strong>
                 <select id="editLocation_${uniqueId}" style="padding: 5px; border: 1px solid #ccc; border-radius: 5px; width: 100%;">
@@ -1069,6 +1094,8 @@ window.resetForm = function() {
             photoCount: 0,
             photos: [],
             descriptions: [],
+            photoBatchIndices: [],
+            currentBatchIndex: -1,
             mealTime: '',
             location: '',
             amount: '',
@@ -1152,6 +1179,8 @@ window.startNewRecord = function() {
         photoCount: 0,
         photos: [],
         descriptions: [],
+        photoBatchIndices: [],
+        currentBatchIndex: -1,
         mealTime: '',
         location: '',
         amount: '',
@@ -1219,6 +1248,8 @@ window.startNewDay = function() {
         photoCount: 0,
         photos: [],
         descriptions: [],
+        photoBatchIndices: [],
+        currentBatchIndex: -1,
         mealTime: '',
         location: '',
         amount: '',
@@ -1339,7 +1370,8 @@ window.finalizeRecord = function(uniqueId) {
     
     const finalDescriptions = [];
     for (let i = 0; i < mealData.descriptions.length; i++) {
-        const descField = uniqueId ? document.getElementById(`desc${i}_${uniqueId}`) : document.getElementById(`desc${i}`);
+        const batchKey = i.toString();
+        const descField = uniqueId ? document.getElementById(`desc${batchKey}_${uniqueId}`) : document.getElementById(`desc${batchKey}`);
         if (descField) {
             finalDescriptions.push(descField.value);
         } else {
@@ -1409,6 +1441,8 @@ window.finalizeRecord = function(uniqueId) {
         photoCount: 0,
         photos: [],
         descriptions: [],
+        photoBatchIndices: [],
+        currentBatchIndex: -1,
         mealTime: '',
         location: '',
         amount: '',
@@ -1694,8 +1728,7 @@ window.viewAllRecords = function() {
             <strong>非常感謝您的認真配合！您的記錄對我們非常重要。</strong><br><br>
             
             <div class="action-buttons-container" style="display: flex; gap: 10px; margin-top: 15px;">
-                <button class="action-btn" onclick="supplementRecords()" style="flex: 1; padding: 10px 12px; border: none; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%); color: white;">立即補充記錄</button>
-                <button class="action-btn" onclick="startNewDay()" style="flex: 1; padding: 10px 12px; border: none; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; background-color: #6b7280; color: white;">明日繼續記錄</button>
+                <button class="action-btn" onclick="startNewDay()" style="flex: 1; padding: 10px 12px; border: none; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%); color: white;">繼續添加記錄</button>
             </div>
         </div>
     `;
@@ -1816,15 +1849,43 @@ window.updateRecordsSummary = function() {
         <strong>非常感謝您的認真配合！您的記錄對我們非常重要。</strong><br><br>
         
         <div class="action-buttons-container" style="display: flex; gap: 10px; margin-top: 15px;">
-            <button class="action-btn" onclick="supplementRecords()" style="flex: 1; padding: 10px 12px; border: none; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%); color: white;">立即補充記錄</button>
-            <button class="action-btn" onclick="startNewDay()" style="flex: 1; padding: 10px 12px; border: none; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; background-color: #6b7280; color: white;">明日繼續記錄</button>
+            <button class="action-btn" onclick="startNewDay()" style="flex: 1; padding: 10px 12px; border: none; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%); color: white;">繼續添加記錄</button>
         </div>
     `;
 }
 
-// Supplement records
+// Supplement records (for individual date completion - keeps current date)
 window.supplementRecords = function() {
     window.startNewRecord();
+}
+
+// Supplement records with date selection first (for final summary)
+window.supplementRecordsWithDateSelect = function() {
+    // Reset to date selection
+    recordDateSelect.selectedIndex = 0;
+    recordedMeals = {};
+    mealPhotos = [];
+    mealDescriptions = [];
+    currentMealName = '';
+    snackType = '';
+    
+    // Show date selection message
+    const botMsg = document.createElement('div');
+    botMsg.className = 'bot-message';
+    botMsg.innerHTML = `
+        <div class="message-content">
+            <strong>請先選擇要補充記錄的日期：</strong><br><br>
+            選擇日期後，您可以為該天添加餐次記錄。
+        </div>
+    `;
+    chatMessagesEl.appendChild(botMsg);
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+    
+    // Scroll to date selector
+    setTimeout(() => {
+        recordDateSelect.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        recordDateSelect.focus();
+    }, 300);
 }
 
 // API Functions for saving to database

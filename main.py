@@ -409,7 +409,7 @@ def complete_exercise_day():
         # You might want to create an exercise_daily_records table similar to daily_records
         # For now, we'll just return success
         
-        return jsonify({'success': True, 'message': '運動記錄已完成'})
+        return jsonify({'success': True, 'message': '活動記錄已完成'})
         
     except Exception as e:
         print(f"Complete exercise day error: {e}")
@@ -441,9 +441,9 @@ def mark_no_exercise():
             'record_date_label': record_date_label,
             'start_time': '00:00',
             'end_time': '00:00',
-            'exercise_type': '無運動',
+            'exercise_type': '睡覺',
             'intensity': '無',
-            'description': '本日無運動'
+            'description': '本日睡覺'
         }
         
         # First delete any existing records for this date
@@ -459,7 +459,7 @@ def mark_no_exercise():
         if not insert_response.data or len(insert_response.data) == 0:
             return jsonify({'success': False, 'message': '標記失敗'}), 500
         
-        return jsonify({'success': True, 'message': '已標記本日無運動'})
+        return jsonify({'success': True, 'message': '已標記本日睡覺'})
         
     except Exception as e:
         print(f"Mark no exercise error: {e}")

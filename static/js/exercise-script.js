@@ -9,18 +9,16 @@ const exerciseDateOptions = [
 ];
 const completedExerciseDates = new Set();
 
+// Time block selection state
+let selectedTimeBlocks = [];
+let isDragging = false;
+
 // Color map for different exercise types
 const exerciseColors = {
-    '跑步': '#ef4444',
-    '步行': '#3b82f6',
-    '騎自行車': '#8b5cf6',
-    '游泳': '#06b6d4',
-    '瑜伽': '#ec4899',
-    '健身': '#f97316',
-    '球類運動': '#10b981',
-    '舞蹈': '#f59e0b',
-    '登山': '#84cc16',
-    '無運動': '#d1d5db',
+    '運動': '#ef4444',
+    '坐著': '#3b82f6',
+    '吃飯': '#f97316',
+    '睡覺': '#8b5cf6',
     '其他': '#6b7280'
 };
 
@@ -46,69 +44,226 @@ function confirmExerciseDate() {
     document.getElementById('timelineSection').style.display = 'block';
     
     // Update the exercise entry title with the selected date
-    document.getElementById('exerciseEntryTitle').textContent = `添加${selectedDateLabel}的運動記錄`;
+    document.getElementById('exerciseEntryTitle').textContent = `添加${selectedDateLabel}的活動記錄`;
+    
+    // Initialize time block selector
+    initializeTimeBlockSelector();
     
     // Load existing records for this date (disabled for now - no database)
     // loadExerciseRecords();
 }
 
+function initializeTimeBlockSelector() {
+    const selector = document.getElementById('timeBlockSelector');
+    selector.innerHTML = '';
+    
+    // Generate time blocks from 00:00 to 23:45 (every 15 minutes)
+    for (let hour = 0; hour < 24; hour++) {
+        for (let minute = 0; minute < 60; minute += 15) {
+            const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+            const block = document.createElement('div');
+            block.className = 'time-block';
+            block.dataset.time = timeStr;
+            block.textContent = timeStr;
+            block.style.cssText = `
+                padding: 8px 4px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                text-align: center;
+                cursor: pointer;
+                font-size: 11px;
+                background: white;
+                user-select: none;
+                transition: all 0.2s;
+            `;
+            
+            // Mouse events for selection
+            block.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                isDragging = true;
+                toggleTimeBlock(this);
+            });
+            
+            block.addEventListener('mouseenter', function() {
+                if (isDragging) {
+                    toggleTimeBlock(this);
+                }
+            });
+            
+            block.addEventListener('mouseup', function() {
+                isDragging = false;
+            });
+            
+            // Touch events for mobile
+            block.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                toggleTimeBlock(this);
+            });
+            
+            selector.appendChild(block);
+        }
+    }
+    
+    // Add global mouseup listener
+    document.addEventListener('mouseup', function() {
+        isDragging = false;
+    });
+    
+    // Add final time 24:00 for display purposes
+    updateTimelineBlocks();
+}
+
+function toggleTimeBlock(block) {
+    const time = block.dataset.time;
+    const index = selectedTimeBlocks.indexOf(time);
+    
+    if (index === -1) {
+        selectedTimeBlocks.push(time);
+        block.style.background = '#3b82f6';
+        block.style.color = 'white';
+        block.style.borderColor = '#2563eb';
+    } else {
+        selectedTimeBlocks.splice(index, 1);
+        block.style.background = 'white';
+        block.style.color = 'black';
+        block.style.borderColor = '#ddd';
+    }
+    
+    updateSelectedTimeDisplay();
+}
+
+function updateSelectedTimeDisplay() {
+    const display = document.getElementById('selectedTimeDisplay');
+    
+    if (selectedTimeBlocks.length === 0) {
+        display.textContent = '未選擇';
+        return;
+    }
+    
+    // Sort selected blocks
+    selectedTimeBlocks.sort();
+    
+    // Find continuous ranges
+    const ranges = [];
+    let rangeStart = selectedTimeBlocks[0];
+    let rangeEnd = selectedTimeBlocks[0];
+    
+    for (let i = 1; i < selectedTimeBlocks.length; i++) {
+        const current = selectedTimeBlocks[i];
+        const prev = selectedTimeBlocks[i - 1];
+        
+        // Check if continuous (15 minutes apart)
+        if (timeToMinutes(current) - timeToMinutes(prev) === 15) {
+            rangeEnd = current;
+        } else {
+            ranges.push({ start: rangeStart, end: addMinutes(rangeEnd, 15) });
+            rangeStart = current;
+            rangeEnd = current;
+        }
+    }
+    
+    // Add the last range
+    ranges.push({ start: rangeStart, end: addMinutes(rangeEnd, 15) });
+    
+    // Display ranges
+    display.textContent = ranges.map(r => `${r.start}-${r.end}`).join(', ');
+}
+
+function clearTimeSelection() {
+    selectedTimeBlocks = [];
+    
+    // Reset all blocks
+    const blocks = document.querySelectorAll('.time-block');
+    blocks.forEach(block => {
+        block.style.background = 'white';
+        block.style.color = 'black';
+        block.style.borderColor = '#ddd';
+    });
+    
+    updateSelectedTimeDisplay();
+}
+
+function addMinutes(timeStr, minutes) {
+    const totalMinutes = timeToMinutes(timeStr) + minutes;
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    
+    if (hours >= 24) return '24:00';
+    
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
+
 function addExerciseRecord() {
-    const startTime = document.getElementById('exerciseStartTime').value;
-    const endTime = document.getElementById('exerciseEndTime').value;
     const type = document.getElementById('exerciseType').value;
     const intensity = document.getElementById('exerciseIntensity').value;
     const description = document.getElementById('exerciseDescription').value;
     
     // Validation
-    if (!startTime || !endTime) {
-        alert('請輸入運動開始和結束時間');
+    if (selectedTimeBlocks.length === 0) {
+        alert('請選擇活動時間');
         return;
     }
     
     if (!type) {
-        alert('請選擇運動類型');
+        alert('請選擇活動類型');
         return;
     }
     
     if (!intensity) {
-        alert('請選擇運動強度');
+        alert('請選擇活動強度');
         return;
     }
     
-    // Check time validity
-    if (startTime >= endTime) {
-        alert('結束時間必須晚於開始時間');
-        return;
+    // Sort selected blocks and find ranges
+    selectedTimeBlocks.sort();
+    const ranges = [];
+    let rangeStart = selectedTimeBlocks[0];
+    let rangeEnd = selectedTimeBlocks[0];
+    
+    for (let i = 1; i < selectedTimeBlocks.length; i++) {
+        const current = selectedTimeBlocks[i];
+        const prev = selectedTimeBlocks[i - 1];
+        
+        if (timeToMinutes(current) - timeToMinutes(prev) === 15) {
+            rangeEnd = current;
+        } else {
+            ranges.push({ start: rangeStart, end: addMinutes(rangeEnd, 15) });
+            rangeStart = current;
+            rangeEnd = current;
+        }
     }
+    ranges.push({ start: rangeStart, end: addMinutes(rangeEnd, 15) });
     
-    // Remove all existing "無運動" records before adding new one
-    exerciseRecords = exerciseRecords.filter(r => r.type !== '無運動');
+    // Remove all existing "睡覺" records before adding new one
+    exerciseRecords = exerciseRecords.filter(r => r.type !== '睡覺');
     
-    // Create record object
-    const record = {
-        id: Date.now(),
-        startTime: startTime,
-        endTime: endTime,
-        type: type,
-        intensity: intensity,
-        description: description,
-        recordDate: selectedDate
-    };
-    
-    exerciseRecords.push(record);
+    // Create record objects for each continuous range
+    for (const range of ranges) {
+        const record = {
+            id: Date.now() + Math.random(),
+            startTime: range.start,
+            endTime: range.end,
+            type: type,
+            intensity: intensity,
+            description: description,
+            recordDate: selectedDate
+        };
+        
+        exerciseRecords.push(record);
+    }
     
     // Clear form
     clearExerciseForm();
     
     // Update timeline and list
-    updateTimeline();
+    updateTimelineBlocks();
     updateExerciseList();
     
     // Save to backend (disabled for now - no database table yet)
     // saveExerciseRecord(record);
 }
 
-function updateTimeline() {
+function updateTimelineBlocks() {
     const timelineBlocks = document.getElementById('timelineBlocks');
     const legend = document.getElementById('timelineLegend');
     
@@ -119,28 +274,75 @@ function updateTimeline() {
     // Track used types for legend
     const usedTypes = new Set();
     
-    // Add exercise blocks
+    // Create time map (0:00 to 23:59 in full day)
+    const timeMap = {};
+    for (let hour = 0; hour < 24; hour++) {
+        for (let minute = 0; minute < 60; minute += 15) {
+            const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+            timeMap[timeStr] = null;
+        }
+    }
+    
+    // Fill time map with exercise records
     exerciseRecords.forEach(record => {
-        const block = document.createElement('div');
-        const color = exerciseColors[record.type] || exerciseColors['其他'];
-        
-        // Calculate position and width based on time
         const startMinutes = timeToMinutes(record.startTime);
         const endMinutes = timeToMinutes(record.endTime);
-        const leftPercent = (startMinutes / 1440) * 100; // 1440 minutes in a day
-        const widthPercent = ((endMinutes - startMinutes) / 1440) * 100;
         
-        block.style.position = 'absolute';
-        block.style.left = leftPercent + '%';
-        block.style.width = widthPercent + '%';
-        block.style.height = '100%';
-        block.style.backgroundColor = color;
-        block.style.borderRadius = '4px';
-        block.style.border = '1px solid rgba(0,0,0,0.1)';
-        block.title = `${record.type} (${record.startTime}-${record.endTime})`;
+        for (let m = startMinutes; m < endMinutes; m += 15) {
+            const hour = Math.floor(m / 60);
+            const minute = m % 60;
+            const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+            
+            if (timeMap[timeStr] !== undefined) {
+                timeMap[timeStr] = {
+                    type: record.type,
+                    intensity: record.intensity,
+                    description: record.description,
+                    startTime: record.startTime,
+                    endTime: record.endTime
+                };
+                usedTypes.add(record.type);
+            }
+        }
+    });
+    
+    // Create visual blocks for the timeline (1440 minutes in a day, 96 15-minute blocks)
+    const blocks = Object.entries(timeMap);
+    
+    blocks.forEach(([time, data]) => {
+        const block = document.createElement('div');
+        block.style.cssText = `
+            flex: 1;
+            height: 100%;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-right: 1px solid #d1d5db;
+            position: relative;
+        `;
+        
+        if (data) {
+            const color = exerciseColors[data.type] || exerciseColors['其他'];
+            block.style.backgroundColor = color;
+            block.title = `${data.type}\n${data.startTime}-${data.endTime}\n${data.intensity}${data.description ? '\n' + data.description : ''}`;
+            
+            // Add click handler to show details
+            block.addEventListener('click', function() {
+                showActionDetails(data);
+            });
+            
+            block.addEventListener('mouseenter', function() {
+                this.style.opacity = '0.8';
+            });
+            
+            block.addEventListener('mouseleave', function() {
+                this.style.opacity = '1';
+            });
+        } else {
+            block.style.backgroundColor = '#e5e7eb';
+        }
         
         timelineBlocks.appendChild(block);
-        usedTypes.add(record.type);
     });
     
     // Add legend items
@@ -167,12 +369,30 @@ function updateTimeline() {
     });
 }
 
+function showActionDetails(actionData) {
+    document.getElementById('actionDetailsTime').textContent = `${actionData.startTime} - ${actionData.endTime}`;
+    document.getElementById('actionDetailsType').textContent = actionData.type;
+    document.getElementById('actionDetailsIntensity').textContent = actionData.intensity;
+    document.getElementById('actionDetailsDescription').textContent = actionData.description || '(無)';
+    
+    const modal = document.getElementById('actionDetailsModal');
+    modal.style.display = 'flex';
+}
+
+function closeActionDetailsModal() {
+    document.getElementById('actionDetailsModal').style.display = 'none';
+}
+
+function updateTimeline() {
+    updateTimelineBlocks();
+}
+
 function updateExerciseList() {
     const exerciseItems = document.getElementById('exerciseItems');
     exerciseItems.innerHTML = '';
     
     if (exerciseRecords.length === 0) {
-        exerciseItems.innerHTML = '<p style="color: #999; font-size: 14px;">暫無運動記錄</p>';
+        exerciseItems.innerHTML = '<p style="color: #999; font-size: 14px;">暫無活動記錄</p>';
         return;
     }
     
@@ -210,7 +430,7 @@ function updateExerciseList() {
         
         records.forEach(record => {
             const descDisplay = record.description ? `${record.description}` : '';
-            const intensityDisplay = type === '無運動' ? '' : `<span style="min-width: 50px;">${record.intensity}</span>`;
+            const intensityDisplay = type === '睡覺' ? '' : `<span style="min-width: 50px;">${record.intensity}</span>`;
             htmlContent += `
                     <div style="font-size: 13px; color: #666; margin-bottom: 6px; display: flex; gap: 12px; align-items: center;">
                         <span style="min-width: 70px;">${record.startTime}-${record.endTime}</span>
@@ -232,12 +452,12 @@ function updateExerciseList() {
 }
 
 function deleteExerciseRecord(recordId) {
-    if (!confirm('確定要刪除此運動記錄嗎？')) {
+    if (!confirm('確定要刪除此活動記錄嗎？')) {
         return;
     }
     
     exerciseRecords = exerciseRecords.filter(r => r.id !== recordId);
-    updateTimeline();
+    updateTimelineBlocks();
     updateExerciseList();
     
     // TODO: Delete from backend
@@ -245,12 +465,12 @@ function deleteExerciseRecord(recordId) {
 
 function deleteExerciseRecordsByType(type) {
     const count = exerciseRecords.filter(r => r.type === type).length;
-    if (!confirm(`確定要刪除${count}條${type}的運動記錄嗎？`)) {
+    if (!confirm(`確定要刪除${count}條${type}的活動記錄嗎？`)) {
         return;
     }
     
     exerciseRecords = exerciseRecords.filter(r => r.type !== type);
-    updateTimeline();
+    updateTimelineBlocks();
     updateExerciseList();
 }
 
@@ -260,8 +480,7 @@ function timeToMinutes(timeStr) {
 }
 
 function clearExerciseForm() {
-    document.getElementById('exerciseStartTime').value = '';
-    document.getElementById('exerciseEndTime').value = '';
+    clearTimeSelection();
     document.getElementById('exerciseType').value = '';
     document.getElementById('exerciseIntensity').value = '';
     document.getElementById('exerciseDescription').value = '';
@@ -313,7 +532,7 @@ async function loadExerciseRecords() {
                 recordDate: r.record_date
             }));
             
-            updateTimeline();
+            updateTimelineBlocks();
             updateExerciseList();
         }
     } catch (error) {
@@ -323,11 +542,11 @@ async function loadExerciseRecords() {
 
 async function finishExerciseDay() {
     if (exerciseRecords.length === 0) {
-        alert('請至少添加一條運動記錄');
+        alert('請至少添加一條活動記錄');
         return;
     }
     
-    if (!confirm('確定完成今日運動記錄嗎？')) {
+    if (!confirm('確定完成今日活動記錄嗎？')) {
         return;
     }
     
@@ -335,13 +554,13 @@ async function finishExerciseDay() {
     const timeGaps = calculateTimeGaps();
     
     if (timeGaps.length > 0) {
-        // Auto-fill gaps with "無運動"
+        // Auto-fill gaps with "睡覺"
         for (const gap of timeGaps) {
             const record = {
                 id: Date.now() + Math.random(),
                 startTime: gap.start,
                 endTime: gap.end,
-                type: '無運動',
+                type: '睡覺',
                 intensity: '無',
                 description: '',
                 recordDate: selectedDate
@@ -349,7 +568,7 @@ async function finishExerciseDay() {
             exerciseRecords.push(record);
         }
         
-        updateTimeline();
+        updateTimelineBlocks();
         updateExerciseList();
     }
     
@@ -395,7 +614,7 @@ function showExerciseSummary() {
         completedExerciseDates.add(selectedDate);
     }
 
-    const totalExerciseCount = exerciseRecords.filter(r => r.type !== '無運動').length;
+    const totalExerciseCount = exerciseRecords.length;
     document.getElementById('summaryDateLabel').textContent = selectedDateLabel || '這一天';
     document.getElementById('summaryTotalCount').textContent = totalExerciseCount;
 
@@ -436,32 +655,26 @@ function continueNextExerciseDay() {
         return;
     }
 
-    // Pick the first remaining day
-    const nextDay = remainingDays[0];
-    selectedDate = nextDay.value;
-    selectedDateLabel = nextDay.label;
-
-    // Reset records and UI for the next day
+    // Reset for next day selection
+    selectedDate = '';
+    selectedDateLabel = '';
     exerciseRecords = [];
-    updateTimeline();
-    updateExerciseList();
-    clearExerciseForm();
-
-    // Update radio buttons
+    
+    // Clear radio button selections
     const radios = document.querySelectorAll('input[name="exerciseDate"]');
     radios.forEach(radio => {
-        radio.checked = radio.value === selectedDate;
+        radio.checked = false;
     });
 
-    document.getElementById('exerciseEntryTitle').textContent = `添加${selectedDateLabel}的運動記錄`;
+    // Show date selection section, hide others
     document.getElementById('summarySection').style.display = 'none';
-    document.getElementById('dateSection').style.display = 'none';
-    document.getElementById('exerciseEntrySection').style.display = 'block';
-    document.getElementById('timelineSection').style.display = 'block';
+    document.getElementById('dateSection').style.display = 'block';
+    document.getElementById('exerciseEntrySection').style.display = 'none';
+    document.getElementById('timelineSection').style.display = 'none';
 }
 
 async function markNoExercise() {
-    if (!confirm('確定將所有未記錄的時間填充為"無運動"嗎？')) {
+    if (!confirm('確定將所有未記錄的時間填充為"睡覺"嗎？')) {
         return;
     }
     
@@ -469,17 +682,17 @@ async function markNoExercise() {
     const timeGaps = calculateTimeGaps();
     
     if (timeGaps.length === 0) {
-        alert('全天都已有運動記錄，無需填充！');
+        alert('全天都已有活動記錄，無需填充！');
         return;
     }
     
-    // Add "無運動" records for each gap
+    // Add "睡覺" records for each gap
     for (const gap of timeGaps) {
         const record = {
             id: Date.now() + Math.random(),
             startTime: gap.start,
             endTime: gap.end,
-            type: '無運動',
+            type: '睡覺',
             intensity: '無',
             description: '',
             recordDate: selectedDate
@@ -490,8 +703,8 @@ async function markNoExercise() {
         // await saveExerciseRecord(record);
     }
     
-    alert(`已填充 ${timeGaps.length} 個時間段為"無運動"！`);
-    updateTimeline();
+    alert(`已填充 ${timeGaps.length} 個時間段為"睡覺"！`);
+    updateTimelineBlocks();
     updateExerciseList();
 }
 
