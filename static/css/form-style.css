@@ -853,7 +853,7 @@ button {
     }
     
     .form-container {
-        padding: 5px;
+        padding: 80px 0 10px 0;
         min-height: auto;
     }
     
@@ -879,11 +879,24 @@ button {
         grid-template-columns: 1fr;
     }
     
-    .header-bar {
+    .top-bar {
         padding: 12px 15px;
     }
     
-    .header-bar span {
+    .top-bar span {
+        font-size: 12px;
+    }
+
+    .top-bar img {
+        max-width: 200px;
+    }
+
+    .nav-switch {
+        gap: 15px;
+    }
+
+    .nav-btn{
+        min-width: 180px;
         font-size: 15px;
     }
 }
@@ -900,12 +913,16 @@ button {
         min-height: auto;
     }
     
-    .header-bar {
+    .top-bar {
         padding: 12px;
     }
     
-    .header-bar span {
+    .top-bar span {
         font-size: 14px;
+    }
+
+    .top-bar img {
+        max-width: 150px;
     }
     
     .logout-btn {

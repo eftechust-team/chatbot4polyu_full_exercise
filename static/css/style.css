@@ -41,6 +41,7 @@ body {
     padding: 12px 24px;
     box-sizing: border-box;
     z-index: 1000;
+    justify-content: space-between;
 }
 
 .top-bar img {
@@ -52,7 +53,8 @@ body {
 .nav-switch {
     display: flex;
     align-items: center;
-    gap: 12px;
+    padding-top: 20px;
+    gap: 100px;
     margin: 0 auto;
     flex: 1;
     justify-content: center;
@@ -61,7 +63,7 @@ body {
 .nav-btn {
     display: inline-block;
     padding: 10px 24px;
-    font-size: 15px;
+    font-size: 20px;
     font-weight: 600;
     color: var(--text);
     background: #ffffff;
@@ -70,7 +72,7 @@ body {
     cursor: pointer;
     text-decoration: none;
     transition: all 0.2s ease;
-    min-width: 110px;
+    min-width: 300px;
     text-align: center;
 }
 

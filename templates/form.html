@@ -11,13 +11,7 @@
     <div class="top-bar">
         <img src="/static/logo.jpeg" alt="Logo" style="max-height: 48px; height: auto; flex-shrink: 0;">
 
-        <!-- Navigation switch: 飲食記錄 | 運動記錄 -->
-        <div class="nav-switch">
-            <a href="/form" class="nav-btn active">飲食記錄</a>
-            <a href="/exercise" class="nav-btn">運動記錄</a>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; gap: 12px; font-size: 14px;">
             <span>歡迎，{{ session.get('name', '參與者') }} (編號: {{ session.get('participant_id', '') }})</span>
             <button onclick="logout()" class="logout-btn">登出</button>
         </div>
@@ -112,6 +106,11 @@
                 <p style="margin-top: 8px; color: var(--text-muted);">如有問題，請聯繫：Miss Xu +825 51356879</p>
             </div>
         </div>
+    </div>
+
+    <div class="nav-switch">
+        <a href="/form" class="nav-btn active">飲食記錄</a>
+        <a href="/exercise" class="nav-btn">運動記錄</a>
     </div>
 
     <script src="/static/js/form-script.js?v=20260113-format-hint"></script>
