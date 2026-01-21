@@ -125,7 +125,7 @@ CREATE TABLE participants (
 );
 
 -- Table 2: Daily Records (tracks each recording day)
-CREATE TABLE daily_records (
+CREATE TABLE meal_daily_records (
     id INT8 PRIMARY KEY DEFAULT uuid_generate_v4(),
     participant_id TEXT NOT NULL,
     record_date TEXT NOT NULL, -- 'workday1', 'workday2', 'restday'
@@ -167,6 +167,34 @@ CREATE TABLE food_photos (
     photo_order INTEGER DEFAULT 0, -- order of photo in the meal
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() 
 );
+
+-- Table 5: Exercise Daily Records (tracks each recording day)
+CREATE TABLE exercise_daily_records (
+    id SERIAL PRIMARY KEY,
+    participant_id TEXT NOT NULL,
+    record_date TEXT NOT NULL, -- 'workday1', 'workday2', 'restday'
+    record_date_label TEXT NOT NULL, -- '第一個工作日', '第二個工作日', '第一個休息日'
+    is_completed BOOLEAN DEFAULT FALSE,
+    activity_level TEXT, -- '少於平常', '平常', '多於平常'
+    activity_reason TEXT, -- Reason if activity level is not '平常'
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Table 6: Exercise Records (each entry)
+CREATE TABLE exercise_records (
+    id SERIAL PRIMARY KEY,
+    exercise_daily_record_id INTEGER, -- Link to daily record
+    participant_id TEXT NOT NULL,
+    record_date TEXT NOT NULL, -- 'workday1', 'workday2', 'restday'
+    record_date_label TEXT,
+    start_time TEXT NOT NULL, -- 'HH:MM' format
+    end_time TEXT NOT NULL, -- 'HH:MM' format
+    exercise_type TEXT NOT NULL, -- '跑步', '步行', '騎自行車', etc.
+    intensity TEXT NOT NULL, -- '低強度', '中強度', '高強度', '無'
+    description TEXT, -- Optional additional notes
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 
 ### Participant Report
 ```bash

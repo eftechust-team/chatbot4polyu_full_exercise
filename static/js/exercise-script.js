@@ -24,7 +24,7 @@ const exerciseColors = {
     '其他': '#6b7280'
 };
 
-function confirmExerciseDate() {
+async function confirmExerciseDate() {
     const selectedRadio = document.querySelector('input[name="exerciseDate"]:checked');
     
     if (!selectedRadio) {
@@ -48,11 +48,11 @@ function confirmExerciseDate() {
     // Update the exercise entry title with the selected date
     document.getElementById('exerciseEntryTitle').textContent = `添加${selectedDateLabel}的運動記錄`;
     
-    // Load existing records for this date (disabled for now - no database)
-    // loadExerciseRecords();
+    // Load existing records for this date from backend
+    await loadExerciseRecords();
 }
 
-function addExerciseRecord() {
+async function addExerciseRecord() {
     const startTime = document.getElementById('exerciseStartTime').value;
     const endTime = document.getElementById('exerciseEndTime').value;
     const type = document.getElementById('exerciseType').value;
@@ -86,7 +86,6 @@ function addExerciseRecord() {
     
     // Create record object
     const record = {
-        id: Date.now(),
         startTime: startTime,
         endTime: endTime,
         type: type,
@@ -95,17 +94,21 @@ function addExerciseRecord() {
         recordDate: selectedDate
     };
     
-    exerciseRecords.push(record);
+    // Save to backend first
+    const saved = await saveExerciseRecord(record);
     
-    // Clear form
-    clearExerciseForm();
-    
-    // Update timeline and list
-    updateTimeline();
-    updateExerciseList();
-    
-    // Save to backend (disabled for now - no database table yet)
-    // saveExerciseRecord(record);
+    if (saved) {
+        // Add to local array with the ID from backend
+        record.id = saved.exercise_record_id;
+        exerciseRecords.push(record);
+        
+        // Clear form
+        clearExerciseForm();
+        
+        // Update timeline and list
+        updateTimeline();
+        updateExerciseList();
+    }
 }
 
 function updateTimeline() {
@@ -231,24 +234,20 @@ function updateExerciseList() {
     });
 }
 
-function deleteExerciseRecord(recordId) {
-    if (!confirm('確定要刪除此運動記錄嗎？')) {
-        return;
-    }
+async function deleteExerciseRecordsByType(type) {
+    const recordsToDelete = exerciseRecords.filter(r => r.type === type);
+    const count = recordsToDelete.length;
     
-    exerciseRecords = exerciseRecords.filter(r => r.id !== recordId);
-    updateTimeline();
-    updateExerciseList();
-    
-    // TODO: Delete from backend
-}
-
-function deleteExerciseRecordsByType(type) {
-    const count = exerciseRecords.filter(r => r.type === type).length;
     if (!confirm(`確定要刪除${count}條${type}的運動記錄嗎？`)) {
         return;
     }
     
+    // Delete from backend
+    for (const record of recordsToDelete) {
+        await deleteExerciseRecordFromBackend(record.id);
+    }
+    
+    // Remove from local array
     exerciseRecords = exerciseRecords.filter(r => r.type !== type);
     updateTimeline();
     updateExerciseList();
@@ -290,10 +289,14 @@ async function saveExerciseRecord(record) {
         if (!result.success) {
             console.error('Save exercise record error:', result.message);
             alert('保存失敗：' + result.message);
+            return null;
         }
+        
+        return result;
     } catch (error) {
         console.error('Save exercise record error:', error);
         alert('保存失敗，請檢查網絡連接');
+        return null;
     }
 }
 
@@ -321,6 +324,28 @@ async function loadExerciseRecords() {
     }
 }
 
+async function deleteExerciseRecordFromBackend(recordId) {
+    try {
+        const response = await fetch('/api/delete-exercise-record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                record_id: recordId
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            console.error('Delete exercise record error:', result.message);
+        }
+    } catch (error) {
+        console.error('Delete exercise record error:', error);
+    }
+}
+
 async function finishExerciseDay() {
     if (exerciseRecords.length === 0) {
         alert('請至少添加一條運動記錄');
@@ -338,7 +363,6 @@ async function finishExerciseDay() {
         // Auto-fill gaps with "無運動"
         for (const gap of timeGaps) {
             const record = {
-                id: Date.now() + Math.random(),
                 startTime: gap.start,
                 endTime: gap.end,
                 type: '無運動',
@@ -346,7 +370,13 @@ async function finishExerciseDay() {
                 description: '',
                 recordDate: selectedDate
             };
-            exerciseRecords.push(record);
+            
+            // Save to backend
+            const saved = await saveExerciseRecord(record);
+            if (saved) {
+                record.id = saved.exercise_record_id;
+                exerciseRecords.push(record);
+            }
         }
         
         updateTimeline();
@@ -364,7 +394,7 @@ function cancelActivityLevel() {
     document.getElementById('reasonSection').style.display = 'none';
 }
 
-function confirmActivityLevel() {
+async function confirmActivityLevel() {
     const activityLevel = document.getElementById('activityLevel').value;
     
     if (!activityLevel) {
@@ -372,22 +402,47 @@ function confirmActivityLevel() {
         return;
     }
     
-    if (activityLevel !== '平常') {
-        const reason = document.getElementById('activityReason').value.trim();
-        if (!reason) {
-            alert('請填寫原因');
-            return;
-        }
+    const activityReason = document.getElementById('activityReason').value.trim();
+    
+    if (activityLevel !== '平常' && !activityReason) {
+        alert('請填寫原因');
+        return;
     }
     
-    // Close modal and reset fields
-    document.getElementById('activityLevelModal').style.display = 'none';
-    document.getElementById('activityLevel').value = '';
-    document.getElementById('activityReason').value = '';
-    document.getElementById('reasonSection').style.display = 'none';
+    // Save activity level to backend
+    try {
+        const response = await fetch('/api/complete-exercise-day', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                record_date: selectedDate,
+                activity_level: activityLevel,
+                activity_reason: activityReason
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            alert('保存失敗：' + result.message);
+            return;
+        }
+        
+        // Close modal and reset fields
+        document.getElementById('activityLevelModal').style.display = 'none';
+        document.getElementById('activityLevel').value = '';
+        document.getElementById('activityReason').value = '';
+        document.getElementById('reasonSection').style.display = 'none';
 
-    // Show summary page (frontend only for now)
-    showExerciseSummary();
+        // Show summary page
+        showExerciseSummary();
+        
+    } catch (error) {
+        console.error('Complete exercise day error:', error);
+        alert('保存失敗，請檢查網絡連接');
+    }
 }
 
 function showExerciseSummary() {
@@ -429,7 +484,7 @@ function returnToExerciseEditing() {
     document.getElementById('timelineSection').style.display = 'block';
 }
 
-function continueNextExerciseDay() {
+async function continueNextExerciseDay() {
     const remainingDays = exerciseDateOptions.filter(opt => !completedExerciseDates.has(opt.value));
     if (remainingDays.length === 0) {
         alert('所有天數均已完成！');
@@ -443,6 +498,10 @@ function continueNextExerciseDay() {
 
     // Reset records and UI for the next day
     exerciseRecords = [];
+    
+    // Load records for the next day
+    await loadExerciseRecords();
+    
     updateTimeline();
     updateExerciseList();
     clearExerciseForm();
@@ -476,7 +535,6 @@ async function markNoExercise() {
     // Add "無運動" records for each gap
     for (const gap of timeGaps) {
         const record = {
-            id: Date.now() + Math.random(),
             startTime: gap.start,
             endTime: gap.end,
             type: '無運動',
@@ -485,9 +543,12 @@ async function markNoExercise() {
             recordDate: selectedDate
         };
         
-        exerciseRecords.push(record);
-        // Save disabled for now - no database
-        // await saveExerciseRecord(record);
+        // Save to backend
+        const saved = await saveExerciseRecord(record);
+        if (saved) {
+            record.id = saved.exercise_record_id;
+            exerciseRecords.push(record);
+        }
     }
     
     alert(`已填充 ${timeGaps.length} 個時間段為"無運動"！`);

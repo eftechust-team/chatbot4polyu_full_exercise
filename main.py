@@ -164,7 +164,7 @@ def save_meal_record():
             return jsonify({'success': False, 'message': '缺少必填資訊'}), 400
         
         # Step 1: Get or create daily_record
-        daily_record_response = supabase.table('daily_records')\
+        daily_record_response = supabase.table('meal_daily_records')\
             .select('id')\
             .eq('participant_id', participant_id)\
             .eq('record_date', record_date)\
@@ -186,7 +186,7 @@ def save_meal_record():
             
             print(f"Creating new daily record: {new_daily_record}")  # Debug logging
             
-            daily_record_insert = supabase.table('daily_records').insert(new_daily_record).execute()
+            daily_record_insert = supabase.table('meal_daily_records').insert(new_daily_record).execute()
             
             print(f"Daily record insert response: {daily_record_insert.data}")  # Debug logging
             
@@ -277,7 +277,7 @@ def complete_daily_record():
         print(f"Completing daily record for {participant_id}, {record_date}")  # Debug logging
         
         # Update daily_record to mark as completed
-        update_response = supabase.table('daily_records')\
+        update_response = supabase.table('meal_daily_records')\
             .update({'is_completed': True})\
             .eq('participant_id', participant_id)\
             .eq('record_date', record_date)\
@@ -304,14 +304,12 @@ def logout():
 @app.route('/api/save-exercise-record', methods=['POST'])
 def save_exercise_record():
     try:
-        # Check authentication
         if 'participant_id' not in session:
             return jsonify({'success': False, 'message': '請先登入'}), 401
         
         data = request.get_json()
         participant_id = session['participant_id']
         
-        # Extract data
         record_date = data.get('record_date')
         record_date_label = data.get('record_date_label')
         start_time = data.get('start_time')
@@ -320,12 +318,31 @@ def save_exercise_record():
         intensity = data.get('intensity')
         description = data.get('description', '')
         
-        # Validation
         if not all([record_date, start_time, end_time, exercise_type, intensity]):
             return jsonify({'success': False, 'message': '缺少必填資訊'}), 400
         
-        # Create exercise record
+        # Step 1: Get or create exercise_daily_record
+        daily_record_response = supabase.table('exercise_daily_records')\
+            .select('id')\
+            .eq('participant_id', participant_id)\
+            .eq('record_date', record_date)\
+            .execute()
+        
+        if daily_record_response.data and len(daily_record_response.data) > 0:
+            daily_record_id = int(daily_record_response.data[0]['id'])
+        else:
+            new_daily_record = {
+                'participant_id': participant_id,
+                'record_date': record_date,
+                'record_date_label': record_date_label,
+                'is_completed': False
+            }
+            daily_record_insert = supabase.table('exercise_daily_records').insert(new_daily_record).execute()
+            daily_record_id = int(daily_record_insert.data[0]['id'])
+        
+        # Step 2: Create exercise_record
         exercise_record_data = {
+            'exercise_daily_record_id': daily_record_id,
             'participant_id': participant_id,
             'record_date': record_date,
             'record_date_label': record_date_label,
@@ -336,26 +353,19 @@ def save_exercise_record():
             'description': description if description else None
         }
         
-        print(f"Creating exercise record: {exercise_record_data}")
-        
         exercise_response = supabase.table('exercise_records').insert(exercise_record_data).execute()
         
-        if not exercise_response.data or len(exercise_response.data) == 0:
+        if not exercise_response.data:
             return jsonify({'success': False, 'message': '創建運動記錄失敗'}), 500
-        
-        exercise_record_id = int(exercise_response.data[0]['id'])
-        print(f"Created exercise record: {exercise_record_id}")
         
         return jsonify({
             'success': True,
             'message': '運動記錄保存成功',
-            'exercise_record_id': exercise_record_id
+            'exercise_record_id': int(exercise_response.data[0]['id'])
         })
         
     except Exception as e:
         print(f"Save exercise record error: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'success': False, 'message': f'保存記錄時發生錯誤: {str(e)}'}), 500
 
 @app.route('/api/get-exercise-records', methods=['GET'])
@@ -392,29 +402,38 @@ def get_exercise_records():
 @app.route('/api/complete-exercise-day', methods=['POST'])
 def complete_exercise_day():
     try:
-        # Check authentication
         if 'participant_id' not in session:
             return jsonify({'success': False, 'message': '請先登入'}), 401
         
         data = request.get_json()
         participant_id = session['participant_id']
         record_date = data.get('record_date')
+        activity_level = data.get('activity_level')
+        activity_reason = data.get('activity_reason', '')
         
-        if not record_date:
-            return jsonify({'success': False, 'message': '缺少記錄日期'}), 400
+        if not all([record_date, activity_level]):
+            return jsonify({'success': False, 'message': '缺少必填資訊'}), 400
         
-        print(f"Completing exercise day for {participant_id}, {record_date}")
+        # Update exercise_daily_record
+        update_data = {
+            'is_completed': True,
+            'activity_level': activity_level,
+            'activity_reason': activity_reason if activity_reason else None
+        }
         
-        # Update exercise records to mark as completed
-        # You might want to create an exercise_daily_records table similar to daily_records
-        # For now, we'll just return success
+        update_response = supabase.table('exercise_daily_records')\
+            .update(update_data)\
+            .eq('participant_id', participant_id)\
+            .eq('record_date', record_date)\
+            .execute()
+        
+        if not update_response.data:
+            return jsonify({'success': False, 'message': '標記完成失敗'}), 404
         
         return jsonify({'success': True, 'message': '運動記錄已完成'})
         
     except Exception as e:
         print(f"Complete exercise day error: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({'success': False, 'message': '標記完成時發生錯誤'}), 500
 
 @app.route('/api/mark-no-exercise', methods=['POST'])
@@ -466,6 +485,32 @@ def mark_no_exercise():
         import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'message': '標記時發生錯誤'}), 500
+    
+@app.route('/api/delete-exercise-record', methods=['POST'])
+def delete_exercise_record():
+    try:
+        if 'participant_id' not in session:
+            return jsonify({'success': False, 'message': '請先登入'}), 401
+        
+        data = request.get_json()
+        record_id = data.get('record_id')
+        participant_id = session['participant_id']
+        
+        if not record_id:
+            return jsonify({'success': False, 'message': '缺少記錄ID'}), 400
+        
+        # Delete the record (verify it belongs to this participant)
+        delete_response = supabase.table('exercise_records')\
+            .delete()\
+            .eq('id', record_id)\
+            .eq('participant_id', participant_id)\
+            .execute()
+        
+        return jsonify({'success': True, 'message': '刪除成功'})
+        
+    except Exception as e:
+        print(f"Delete exercise record error: {e}")
+        return jsonify({'success': False, 'message': '刪除失敗'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
