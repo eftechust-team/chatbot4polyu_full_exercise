@@ -58,13 +58,13 @@ def login():
         response = supabase.table('participants').select('*').eq('participant_id', participant_id).execute()
         
         if not response.data or len(response.data) == 0:
-            return jsonify({'success': False, 'message': '找不到此編號，請先註冊。'}), 404
+            return jsonify({'success': False, 'message': '參與者編號或密碼錯誤'}), 401
         
         user = response.data[0]
         
         # Verify password
         if user.get('password') != password:
-            return jsonify({'success': False, 'message': '密碼錯誤'}), 401
+            return jsonify({'success': False, 'message': '參與者編號或密碼錯誤'}), 401
         
         # Check if profile is complete (name, gender, age must not be null)
         if not user.get('name') or not user.get('gender') or not user.get('age'):
@@ -84,7 +84,7 @@ def login():
     except Exception as e:
         print(f"Login error: {e}")
         return jsonify({'success': False, 'message': '登入發生錯誤'}), 500
-
+    
 @app.route('/api/register', methods=['POST'])
 def register():
     try:
@@ -102,70 +102,58 @@ def register():
         if not all([new_user['name'], new_user['participant_id'], new_user['password'], new_user['gender'], new_user['age']]):
             return jsonify({'success': False, 'message': '請填寫所有欄位'}), 400
         
-        # Check if participant_id already exists
+        # Check if participant_id exists
         existing = supabase.table('participants').select('*').eq('participant_id', new_user['participant_id']).execute()
         
-        if existing.data and len(existing.data) > 0:
-            # Participant exists
-            existing_user = existing.data[0]
+        if not existing.data or len(existing.data) == 0:
+            # Participant doesn't exist - NOT ALLOWED
+            return jsonify({'success': False, 'message': '此參與者編號不存在，請聯繫研究人員'}), 404
+        
+        # Participant exists
+        existing_user = existing.data[0]
+        
+        # Verify password
+        if existing_user.get('password') != new_user['password']:
+            return jsonify({'success': False, 'message': '密碼錯誤'}), 401
+        
+        # Check if profile is complete
+        if existing_user.get('name') and existing_user.get('gender') and existing_user.get('age'):
+            # Profile is complete, just login
+            session['user_id'] = existing_user['id']
+            session['participant_id'] = existing_user['participant_id']
+            session['name'] = existing_user['name']
             
-            # Verify password
-            if existing_user.get('password') != new_user['password']:
-                return jsonify({'success': False, 'message': '此編號已註冊但密碼錯誤'}), 401
+            return jsonify({'success': True, 'message': '登入成功', 'redirect': '/form'})
+        else:
+            # Profile incomplete, update it
+            update_data = {
+                'name': new_user['name'],
+                'gender': new_user['gender'],
+                'age': new_user['age']
+            }
             
-            # Check if profile is complete
-            if existing_user.get('name') and existing_user.get('gender') and existing_user.get('age'):
-                # Profile is complete, just login
-                session['user_id'] = existing_user['id']
-                session['participant_id'] = existing_user['participant_id']
-                session['name'] = existing_user['name']
-                
-                return jsonify({'success': True, 'message': '登入成功', 'redirect': '/form'})
-            else:
-                # Profile incomplete, update it
-                update_data = {
-                    'name': new_user['name'],
-                    'gender': new_user['gender'],
-                    'age': new_user['age']
-                }
-                
-                update_response = supabase.table('participants')\
-                    .update(update_data)\
-                    .eq('participant_id', new_user['participant_id'])\
-                    .execute()
-                
-                if not update_response.data:
-                    return jsonify({'success': False, 'message': '更新資料失敗'}), 500
-                
-                updated_user = update_response.data[0]
-                
-                # Login after updating profile
-                session['user_id'] = updated_user['id']
-                session['participant_id'] = updated_user['participant_id']
-                session['name'] = updated_user['name']
-                
-                return jsonify({'success': True, 'message': '註冊成功', 'redirect': '/form'})
-        
-        # New participant - insert
-        response = supabase.table('participants').insert(new_user).execute()
-        
-        if not response.data:
-            return jsonify({'success': False, 'message': '註冊失敗'}), 500
-        
-        user = response.data[0]
-        
-        # Auto-login after registration
-        session['user_id'] = user['id']
-        session['participant_id'] = user['participant_id']
-        session['name'] = user['name']
-        
-        return jsonify({'success': True, 'message': '註冊成功', 'redirect': '/form'})
+            update_response = supabase.table('participants')\
+                .update(update_data)\
+                .eq('participant_id', new_user['participant_id'])\
+                .execute()
+            
+            if not update_response.data:
+                return jsonify({'success': False, 'message': '更新資料失敗'}), 500
+            
+            updated_user = update_response.data[0]
+            
+            # Login after updating profile
+            session['user_id'] = updated_user['id']
+            session['participant_id'] = updated_user['participant_id']
+            session['name'] = updated_user['name']
+            
+            return jsonify({'success': True, 'message': '註冊成功', 'redirect': '/form'})
         
     except Exception as e:
         error_msg = str(e)
         print(f"Register error: {error_msg}")
         return jsonify({'success': False, 'message': '註冊失敗，請稍後再試'}), 500
-
+    
 @app.route('/form')
 def form_page():
     # Check if user is logged in

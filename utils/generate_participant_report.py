@@ -138,7 +138,7 @@ class SupabaseDietaryReportGenerator:
     def get_exercise_day_info(self, participant_id, record_date):
         """Fetch activity level info for a specific exercise day"""
         try:
-            response = self.supabase.table('exercise_day_info')\
+            response = self.supabase.table('exercise_daily_records')\
                 .select('*')\
                 .eq('participant_id', participant_id)\
                 .eq('record_date', record_date)\
@@ -253,9 +253,11 @@ class SupabaseDietaryReportGenerator:
         try:
             if not datetime_str:
                 return '未知'
+            
             # Parse ISO format datetime
             dt = datetime.fromisoformat(datetime_str.replace('Z', '+00:00'))
             return dt.strftime('%Y-%m-%d %H:%M:%S')
+
         except:
             return str(datetime_str)
     
