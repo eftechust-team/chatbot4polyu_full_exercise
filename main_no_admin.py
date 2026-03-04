@@ -2,16 +2,14 @@ import sys
 print(f"Python version: {sys.version}")
 print("Starting application...")
 
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, send_file
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 print("Flask imported successfully")
 
 from supabase import create_client, Client
 print("Supabase imported successfully")
 
 import os
-import io
 from datetime import datetime
-from utils.generate_participant_report import SupabaseDietaryReportGenerator
 print("All imports successful")
 
 app = Flask(__name__)
@@ -41,10 +39,8 @@ def index():
 
 @app.route('/login')
 def login_page():
-    # If already logged in, redirect to appropriate page
+    # If already logged in, redirect to form
     if 'user_id' in session:
-        if session.get('is_admin'):
-            return redirect(url_for('admin_page'))
         return redirect(url_for('form_page'))
     return render_template('login.html')
 
@@ -69,16 +65,6 @@ def login():
         # Verify password
         if user.get('password') != password:
             return jsonify({'success': False, 'message': '參與者編號或密碼錯誤'}), 401
-            
-        # Check if user is admin (boolean column)
-        is_admin = user.get('admin') is True
-        
-        if is_admin:
-            session['user_id'] = user['id']
-            session['participant_id'] = user['participant_id']
-            session['name'] = user.get('name', 'Admin')
-            session['is_admin'] = True
-            return jsonify({'success': True, 'message': '管理員登入成功', 'redirect': '/admin'})
         
         # Check if profile is complete (name, gender, age must not be null)
         if not user.get('name') or not user.get('gender') or not user.get('age'):
@@ -88,11 +74,10 @@ def login():
                 'incomplete_profile': True
             }), 400
         
-        # Save to Flask session for normal user
+        # Save to Flask session
         session['user_id'] = user['id']
         session['participant_id'] = user['participant_id']
         session['name'] = user['name']
-        session['is_admin'] = False
         
         return jsonify({'success': True, 'message': '登入成功', 'redirect': '/form'})
         
@@ -133,16 +118,12 @@ def register():
         
         # Check if profile is complete
         if existing_user.get('name') and existing_user.get('gender') and existing_user.get('age'):
-            is_admin = existing_user.get('admin') is True
-            
             # Profile is complete, just login
             session['user_id'] = existing_user['id']
             session['participant_id'] = existing_user['participant_id']
             session['name'] = existing_user['name']
-            session['is_admin'] = is_admin
             
-            redirect_url = '/admin' if is_admin else '/form'
-            return jsonify({'success': True, 'message': '登入成功', 'redirect': redirect_url})
+            return jsonify({'success': True, 'message': '登入成功', 'redirect': '/form'})
         else:
             # Profile incomplete, update it
             update_data = {
@@ -160,16 +141,13 @@ def register():
                 return jsonify({'success': False, 'message': '更新資料失敗'}), 500
             
             updated_user = update_response.data[0]
-            is_admin = updated_user.get('admin') is True
             
             # Login after updating profile
             session['user_id'] = updated_user['id']
             session['participant_id'] = updated_user['participant_id']
             session['name'] = updated_user['name']
-            session['is_admin'] = is_admin
             
-            redirect_url = '/admin' if is_admin else '/form'
-            return jsonify({'success': True, 'message': '註冊成功', 'redirect': redirect_url})
+            return jsonify({'success': True, 'message': '註冊成功', 'redirect': '/form'})
         
     except Exception as e:
         error_msg = str(e)
@@ -178,80 +156,18 @@ def register():
     
 @app.route('/form')
 def form_page():
+    # Check if user is logged in
     if 'user_id' not in session:
         return redirect(url_for('login_page'))
-    if session.get('is_admin'):
-        return redirect(url_for('admin_page'))
+    
     return render_template('form.html')
 
 @app.route('/exercise')
 def exercise_page():
+    # Check if user is logged in
     if 'user_id' not in session:
         return redirect(url_for('login_page'))
-    if session.get('is_admin'):
-        return redirect(url_for('admin_page'))
     return render_template('exercise.html')
-
-@app.route('/admin')
-def admin_page():
-    if 'user_id' not in session or not session.get('is_admin'):
-        return redirect(url_for('login_page'))
-    return render_template('admin.html')
-
-@app.route('/api/generate-report', methods=['POST'])
-def generate_report():
-    if 'user_id' not in session or not session.get('is_admin'):
-        return jsonify({'success': False, 'message': '無權限執行此操作'}), 403
-        
-    try:
-        data = request.get_json()
-        target_participant_id = data.get('participant_id', '').strip()
-        
-        if not target_participant_id:
-            return jsonify({'success': False, 'message': '請輸入參與者編號'}), 400
-            
-        # Initialize generator
-        # USE /tmp directory for Google App Engine compatibility
-        output_dir = '/tmp'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-            
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        output_filename = f"dietary_report_{target_participant_id}_{timestamp}.pdf"
-        output_path = os.path.join(output_dir, output_filename)
-        
-        pdf_generator = SupabaseDietaryReportGenerator(SUPABASE_URL, SUPABASE_KEY, output_dir=output_dir)
-        
-        # Generate PDF
-        success = pdf_generator.generate_pdf(target_participant_id, output_filename)
-        
-        if success and os.path.exists(output_path):
-            # Read the file into memory
-            with open(output_path, 'rb') as f:
-                return_data = io.BytesIO(f.read())
-            
-            # Delete the file from the server immediately after reading it
-            try:
-                os.remove(output_path)
-                print(f"Successfully deleted temporary file: {output_path}")
-            except OSError as e:
-                print(f"Error deleting temporary file {output_path}: {e}")
-            
-            # Send the in-memory file to the user
-            return send_file(
-                return_data, 
-                as_attachment=True, 
-                download_name=output_filename,
-                mimetype='application/pdf'
-            )
-        else:
-            return jsonify({'success': False, 'message': '生成報告失敗，可能找不到該參與者的記錄'}), 404
-            
-    except Exception as e:
-        print(f"Generate report error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'message': f'生成報告時發生錯誤: {str(e)}'}), 500
 
 @app.route('/api/save-meal-record', methods=['POST'])
 def save_meal_record():
