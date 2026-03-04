@@ -122,6 +122,7 @@ CREATE TABLE participants (
     password TEXT NOT NULL,
     gender TEXT CHECK (gender IN ('male', 'female')),
     age INTEGER,
+    admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
