@@ -1,5 +1,5 @@
 runtime: python312
-entrypoint: gunicorn -b :$PORT main:app
+entrypoint: gunicorn -b :$PORT --timeout 120 main:app
 
 instance_class: F4
 
