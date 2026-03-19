@@ -297,42 +297,41 @@ def generate_report():
         if not target_participant_id:
             return jsonify({'success': False, 'message': '請輸入參與者編號'}), 400
 
-        output_dir = '/tmp'
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        # Use image_preset='low' for fastest generation & smallest size (~1-3MB)
+        # Options: 'low', 'medium', 'high'
+        pdf_generator = SupabaseDietaryReportGenerator(
+            SUPABASE_URL, SUPABASE_KEY,
+            image_preset='low',
+            include_photos=True
+        )
+
+        # generate_pdf_buffer returns BytesIO directly — no temp file needed
+        pdf_buffer = pdf_generator.generate_pdf_buffer(target_participant_id)
+
+        if pdf_buffer is None:
+            return jsonify({
+                'success': False,
+                'message': '生成報告失敗，可能找不到該參與者的記錄'
+            }), 404
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         output_filename = f"dietary_report_{target_participant_id}_{timestamp}.pdf"
-        output_path = os.path.join(output_dir, output_filename)
 
-        pdf_generator = SupabaseDietaryReportGenerator(SUPABASE_URL, SUPABASE_KEY, output_dir=output_dir)
-        success = pdf_generator.generate_pdf(target_participant_id, output_filename)
-
-        if success and os.path.exists(output_path):
-            with open(output_path, 'rb') as f:
-                return_data = io.BytesIO(f.read())
-
-            try:
-                os.remove(output_path)
-                print(f"Successfully deleted temporary file: {output_path}")
-            except OSError as e:
-                print(f"Error deleting temporary file {output_path}: {e}")
-
-            return send_file(
-                return_data,
-                as_attachment=True,
-                download_name=output_filename,
-                mimetype='application/pdf'
-            )
-        else:
-            return jsonify({'success': False, 'message': '生成報告失敗，可能找不到該參與者的記錄'}), 404
+        return send_file(
+            pdf_buffer,
+            as_attachment=True,
+            download_name=output_filename,
+            mimetype='application/pdf'
+        )
 
     except Exception as e:
         print(f"Generate report error: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'success': False, 'message': f'生成報告時發生錯誤: {str(e)}'}), 500
-
+        return jsonify({
+            'success': False,
+            'message': f'生成報告時發生錯誤: {str(e)}'
+        }), 500
 
 # ══════════════════════════════════════════════
 # MEAL API
