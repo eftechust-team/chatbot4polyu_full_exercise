@@ -72,7 +72,7 @@ body.form-page {
     font-weight: 600;
     word-break: break-word;
     flex: 1;
-relationships}
+}
 
 .logout-btn {
     background: #ef4444;
@@ -857,6 +857,139 @@ button {
     transform: scale(0.98);
 }
 
+/* ===== MOBILE RESPONSIVENESS ===== */
+
+/* Tablet breakpoint */
+@media (max-width: 768px) {
+    body.form-page {
+        padding: 10px;
+    }
+    
+    .form-container {
+        padding: 5px;
+        min-height: auto;
+    }
+    
+    .form-content {
+        padding: 15px;
+        min-height: auto;
+    }
+    
+    .right-section {
+        min-height: auto;
+    }
+    
+    .chatbot-container {
+        height: 70vh;
+        max-height: 70vh;
+    }
+    
+    .section-title {
+        font-size: 18px;
+    }
+    
+    .meal-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .header-bar {
+        padding: 12px 15px;
+    }
+    
+    .header-bar span {
+        font-size: 15px;
+    }
+}
+
+/* Small phone breakpoint */
+@media (max-width: 480px) {
+    .form-content {
+        padding: 12px;
+        border-radius: 10px;
+        min-height: auto;
+    }
+    
+    .right-section {
+        min-height: auto;
+    }
+    
+    .header-bar {
+        padding: 12px;
+    }
+    
+    .header-bar span {
+        font-size: 14px;
+    }
+    
+    .logout-btn {
+        font-size: 12px;
+        padding: 5px 12px;
+    }
+    
+    .chat-messages {
+        padding: 10px;
+    }
+    
+    .message-content {
+        font-size: 13px;
+        padding: 8px 10px;
+        max-width: 95%;
+    }
+    
+    .chatbot-container {
+        height: 65vh;
+        max-height: 65vh;
+    }
+    
+    .chat-input-area {
+        padding: 8px;
+    }
+    
+    .chat-input-area input {
+        font-size: 13px;
+        padding: 8px 10px;
+    }
+    
+    .chat-input-area button {
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+    
+    .upload-buttons,
+    .action-buttons-container {
+        flex-direction: column;
+    }
+    
+    .upload-btn,
+    .action-btn {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .modal-content {
+        padding: 15px;
+        margin: 10px;
+        width: calc(100% - 20px);
+    }
+}
+
+/* Landscape mode on phones */
+@media (max-width: 768px) and (orientation: landscape) {
+    .chatbot-container {
+        height: 60vh;
+        max-height: 60vh;
+    }
+}
+
+/* Prevent zoom on input focus (iOS) */
+input[type="text"],
+input[type="number"],
+input[type="time"],
+select,
+textarea {
+    font-size: 16px !important;
+}
+
 /* ===== TABLE-STYLE FOOD RECORD ===== */
 .meal-table-wrap {
     width: 100%;
@@ -963,156 +1096,8 @@ button {
     background: #ef4444;
 }
 
-/* ===== MOBILE RESPONSIVENESS ===== */
-
-/* Tablet breakpoint */
 @media (max-width: 768px) {
-    body.form-page {
-        padding: 10px;
-    }
-    
-    .form-container {
-        padding: 80px 0 10px 0;
-        min-height: auto;
-    }
-    
-    .form-content {
-        padding: 15px;
-        min-height: auto;
-    }
-    
-    .right-section {
-        min-height: auto;
-    }
-    
-    .chatbot-container {
-        height: 70vh;
-        max-height: 70vh;
-    }
-    
-    .section-title {
-        font-size: 18px;
-    }
-    
-    .meal-options {
-        grid-template-columns: 1fr;
-    }
-    
-    .top-bar {
-        padding: 12px 15px;
-    }
-    
-    .top-bar span {
-        font-size: 12px;
-    }
-
-    .top-bar img {
-        max-width: 200px;
-    }
-
-    .nav-switch {
-        gap: 15px;
-    }
-
-    .nav-btn {
-        min-width: 180px;
-        font-size: 15px;
-    }
-
     .meal-table {
         min-width: 720px;
     }
-}
-
-/* Small phone breakpoint */
-@media (max-width: 480px) {
-    .form-content {
-        padding: 12px;
-        border-radius: 10px;
-        min-height: auto;
-    }
-    
-    .right-section {
-        min-height: auto;
-    }
-    
-    .top-bar {
-        padding: 12px;
-    }
-    
-    .top-bar span {
-        font-size: 14px;
-    }
-
-    .top-bar img {
-        max-width: 150px;
-    }
-    
-    .logout-btn {
-        font-size: 12px;
-        padding: 5px 12px;
-    }
-    
-    .chat-messages {
-        padding: 10px;
-    }
-    
-    .message-content {
-        font-size: 13px;
-        padding: 8px 10px;
-        max-width: 95%;
-    }
-    
-    .chatbot-container {
-        height: 65vh;
-        max-height: 65vh;
-    }
-    
-    .chat-input-area {
-        padding: 8px;
-    }
-    
-    .chat-input-area input {
-        font-size: 13px;
-        padding: 8px 10px;
-    }
-    
-    .chat-input-area button {
-        font-size: 12px;
-        padding: 8px 12px;
-    }
-    
-    .upload-buttons,
-    .action-buttons-container {
-        flex-direction: column;
-    }
-    
-    .upload-btn,
-    .action-btn {
-        width: 100%;
-        min-width: auto;
-    }
-    
-    .modal-content {
-        padding: 15px;
-        margin: 10px;
-        width: calc(100% - 20px);
-    }
-}
-
-/* Landscape mode on phones */
-@media (max-width: 768px) and (orientation: landscape) {
-    .chatbot-container {
-        height: 60vh;
-        max-height: 60vh;
-    }
-}
-
-/* Prevent zoom on input focus (iOS) */
-input[type="text"],
-input[type="number"],
-input[type="time"],
-select,
-textarea {
-    font-size: 16px !important;
 }
