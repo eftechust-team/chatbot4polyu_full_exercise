@@ -822,7 +822,7 @@ def complete_exercise_day():
         data = request.get_json()
         participant_id = session['participant_id']
         record_date = data.get('record_date')
-        activity_level = data.get('activity_level')
+        activity_level = data.get('activity_level') or '平常'
         activity_reason = data.get('activity_reason', '')
 
         if not record_date:
@@ -830,7 +830,7 @@ def complete_exercise_day():
 
         update_data = {
             'is_completed': True,
-            'activity_level': activity_level if activity_level else None,
+            'activity_level': activity_level,
             'activity_reason': activity_reason if activity_reason else None
         }
 

@@ -605,8 +605,19 @@ async function addExerciseRecord() {
         ranges.push({ start: rangeStart, end: addMinutes(rangeEnd, 15) });
 
         setSavingState(true);
+
+        // Always sync from backend first so overlap adjustments operate on real record IDs.
+        await loadExerciseRecords();
+        let allAdjustmentNotes = [];
         
         for (const range of ranges) {
+            const adjustmentNotes = await resolveOverlapsForNewRange(range.start, range.end);
+            if (adjustmentNotes.length > 0) {
+                allAdjustmentNotes = allAdjustmentNotes.concat(adjustmentNotes);
+                // Refresh local state after conflict adjustments so subsequent ranges are accurate.
+                await loadExerciseRecords();
+            }
+
             const record = {
                 id: Date.now() + Math.random(),
                 startTime: range.start,
@@ -617,14 +628,18 @@ async function addExerciseRecord() {
                 recordDate: selectedDate
             };
             
+            const saveResult = await saveExerciseRecord(record);
+            if (saveResult && saveResult.exercise_record_id) {
+                record.id = saveResult.exercise_record_id;
+            }
             exerciseRecords.push(record);
-            await saveExerciseRecord(record);
         }
         
         clearExerciseForm();
-        updateTimelineBlocks();
-        updateExerciseList();
-        initializeTimeBlockSelector();
+        await loadExerciseRecords();
+        if (allAdjustmentNotes.length > 0) {
+            alert('以下記錄因新增活動自動調整：\n- ' + allAdjustmentNotes.join('\n- '));
+        }
         const listSection = document.getElementById('timelineSection');
         if (listSection) {
             listSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -635,6 +650,110 @@ async function addExerciseRecord() {
         alert('添加記錄時發生錯誤，請重新整理後再試');
         setSavingState(false);
     }
+}
+
+async function resolveOverlapsForNewRange(newStartTime, newEndTime) {
+    const newStart = timeToMinutes(normalizeTimeValue(newStartTime));
+    const newEnd = timeToMinutes(normalizeTimeValue(newEndTime));
+    const conflicting = (exerciseRecords || []).filter(function(record) {
+        if (!record || record.id === null || record.id === undefined) return false;
+        const rStart = timeToMinutes(normalizeTimeValue(record.startTime));
+        const rEnd = timeToMinutes(normalizeTimeValue(record.endTime));
+        return rStart < newEnd && rEnd > newStart;
+    });
+
+    const adjustmentNotes = [];
+    const toDelete = [];
+    const toUpdate = [];
+    const toInsert = [];
+
+    conflicting.forEach(function(record) {
+        const rStart = timeToMinutes(normalizeTimeValue(record.startTime));
+        const rEnd = timeToMinutes(normalizeTimeValue(record.endTime));
+        const oldStartStr = normalizeTimeValue(record.startTime);
+        const oldEndStr = normalizeTimeValue(record.endTime);
+        const typeName = escapeHtml(record.type || '(未命名)');
+
+        if (rStart < newStart && rEnd > newEnd) {
+            toUpdate.push({
+                record: record,
+                start_time: minutesToTimeString(rStart),
+                end_time: minutesToTimeString(newStart)
+            });
+            toInsert.push({
+                start_time: minutesToTimeString(newEnd),
+                end_time: minutesToTimeString(rEnd),
+                exercise_type: record.type || '',
+                intensity: record.intensity || '',
+                description: record.description || ''
+            });
+            adjustmentNotes.push('「' + typeName + '」（' + oldStartStr + '–' + oldEndStr + '）已拆分為 ' + minutesToTimeString(rStart) + '–' + minutesToTimeString(newStart) + ' 及 ' + minutesToTimeString(newEnd) + '–' + minutesToTimeString(rEnd));
+        } else if (rStart >= newStart && rEnd <= newEnd) {
+            toDelete.push(record.id);
+            adjustmentNotes.push('「' + typeName + '」（' + oldStartStr + '–' + oldEndStr + '）因完全重疊已被刪除');
+        } else if (rStart < newStart) {
+            toUpdate.push({
+                record: record,
+                start_time: minutesToTimeString(rStart),
+                end_time: minutesToTimeString(newStart)
+            });
+            adjustmentNotes.push('「' + typeName + '」（' + oldStartStr + '–' + oldEndStr + '）已調整為 ' + minutesToTimeString(rStart) + '–' + minutesToTimeString(newStart));
+        } else {
+            toUpdate.push({
+                record: record,
+                start_time: minutesToTimeString(newEnd),
+                end_time: minutesToTimeString(rEnd)
+            });
+            adjustmentNotes.push('「' + typeName + '」（' + oldStartStr + '–' + oldEndStr + '）已調整為 ' + minutesToTimeString(newEnd) + '–' + minutesToTimeString(rEnd));
+        }
+    });
+
+    for (let i = 0; i < toDelete.length; i++) {
+        const resp = await fetch('/api/delete-exercise-record/' + toDelete[i], { method: 'DELETE' });
+        if (!resp.ok) {
+            throw new Error('刪除重疊記錄失敗');
+        }
+        const result = await resp.json();
+        if (!result.success) {
+            throw new Error(result.message || '刪除重疊記錄失敗');
+        }
+    }
+
+    for (let i = 0; i < toUpdate.length; i++) {
+        const adj = toUpdate[i];
+        const resp = await fetch('/api/update-exercise-record/' + adj.record.id, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                start_time: adj.start_time,
+                end_time: adj.end_time,
+                exercise_type: adj.record.type || '',
+                intensity: adj.record.intensity || '',
+                description: adj.record.description || ''
+            })
+        });
+        if (!resp.ok) {
+            throw new Error('調整重疊記錄失敗');
+        }
+        const result = await resp.json();
+        if (!result.success) {
+            throw new Error(result.message || '調整重疊記錄失敗');
+        }
+    }
+
+    for (let i = 0; i < toInsert.length; i++) {
+        const extra = toInsert[i];
+        await saveExerciseRecord({
+            startTime: extra.start_time,
+            endTime: extra.end_time,
+            type: extra.exercise_type,
+            intensity: extra.intensity,
+            description: extra.description,
+            recordDate: selectedDate
+        });
+    }
+
+    return adjustmentNotes;
 }
 
 function updateTimelineBlocks() {
@@ -804,7 +923,8 @@ function updateExerciseList() {
         
         records.forEach(record => {
             const descDisplay = record.description ? `${record.description}` : '';
-            const intensityDisplay = type === '睡眠 / 靜止' ? '' : `<span style="min-width: 50px;">${record.intensity}</span>`;
+            const hasIntensity = String(record.intensity || '').trim().length > 0;
+            const intensityDisplay = hasIntensity ? `<span style="min-width: 90px;">${record.intensity}</span>` : '';
             htmlContent += `
                     <div style="font-size: 13px; color: #666; margin-bottom: 6px; display: flex; gap: 12px; align-items: center;">
                         <span style="min-width: 70px;">${record.startTime}-${record.endTime}</span>
@@ -888,12 +1008,13 @@ async function saveExerciseRecord(record) {
         const result = await response.json();
         
         if (!result.success) {
-            console.error('Save exercise record error:', result.message);
-            alert('保存失敗：' + result.message);
+            throw new Error(result.message || '保存失敗');
         }
+
+        return result;
     } catch (error) {
         console.error('Save exercise record error:', error);
-        alert('保存失敗，請檢查網絡連接');
+        throw error;
     }
 }
 
@@ -1025,6 +1146,23 @@ function buildExerciseTypeOptions(selectedValue) {
         const selectedAttr = type === selected ? ' selected' : '';
         opts.push(`<option value="${escapeHtml(type)}"${selectedAttr}>${escapeHtml(type)}</option>`);
     });
+    return opts.join('');
+}
+
+function buildExerciseIntensityOptions(selectedType, selectedValue) {
+    const selected = selectedValue || '';
+    const opts = ['<option value="">請選擇具體活動</option>'];
+    const subOptions = activitySubOptions[selectedType] || [];
+    subOptions.forEach(function(item) {
+        const selectedAttr = item === selected ? ' selected' : '';
+        opts.push(`<option value="${escapeHtml(item)}"${selectedAttr}>${escapeHtml(item)}</option>`);
+    });
+
+    // Keep legacy values selectable when historical data is not in the current options list.
+    if (selected && !subOptions.includes(selected)) {
+        opts.push(`<option value="${escapeHtml(selected)}" selected>${escapeHtml(selected)}</option>`);
+    }
+
     return opts.join('');
 }
 
@@ -1183,13 +1321,15 @@ function renderExerciseViewList(records) {
                     </div>
                     <div>
                         <label style="font-size:12px; color:#475569;">活動類型</label>
-                        <select onchange="updateExerciseEditField('exercise_type', this.value)" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+                        <select onchange="updateExerciseEditTypeField(this.value)" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
                             ${buildExerciseTypeOptions(draft.exercise_type)}
                         </select>
                     </div>
                     <div>
                         <label style="font-size:12px; color:#475569;">具體活動</label>
-                        <textarea rows="2" oninput="updateExerciseEditField('intensity', this.value)" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px; resize:vertical;">${escapeHtml(draft.intensity || '')}</textarea>
+                        <select onchange="updateExerciseEditField('intensity', this.value)" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+                            ${buildExerciseIntensityOptions(draft.exercise_type, draft.intensity)}
+                        </select>
                     </div>
                     <div>
                         <label style="font-size:12px; color:#475569;">補充描述</label>
@@ -1251,6 +1391,18 @@ function updateExerciseEditField(field, value) {
     editingExerciseDraft[field] = value;
 }
 
+function updateExerciseEditTypeField(value) {
+    if (!editingExerciseDraft) return;
+    editingExerciseDraft.exercise_type = value;
+
+    const subOptions = activitySubOptions[value] || [];
+    if (!subOptions.includes(editingExerciseDraft.intensity || '')) {
+        editingExerciseDraft.intensity = '';
+    }
+
+    renderExerciseViewList(currentExerciseViewRecords);
+}
+
 function cancelInlineExerciseEdit() {
     editingExerciseRecordId = null;
     editingExerciseDraft = null;
@@ -1292,6 +1444,7 @@ async function saveInlineExerciseEdit(id) {
     const adjustmentNotes = [];
     const toDelete = [];
     const toUpdate = [];
+    const toInsert = [];
 
     conflicting.forEach(function(record) {
         const rStart = timeToMinutes(normalizeTimeValue(record.start_time));
@@ -1300,7 +1453,17 @@ async function saveInlineExerciseEdit(id) {
         const oldEndStr = normalizeTimeValue(record.end_time);
         const typeName = escapeHtml(record.exercise_type || '(未命名)');
 
-        if (rStart >= newStart && rEnd <= newEnd) {
+        if (rStart < newStart && rEnd > newEnd) {
+            toUpdate.push({ record: record, start_time: minutesToTimeString(rStart), end_time: minutesToTimeString(newStart) });
+            toInsert.push({
+                start_time: minutesToTimeString(newEnd),
+                end_time: minutesToTimeString(rEnd),
+                exercise_type: record.exercise_type || '',
+                intensity: record.intensity || '',
+                description: record.description || ''
+            });
+            adjustmentNotes.push('「' + typeName + '」（' + oldStartStr + '–' + oldEndStr + '）已拆分為 ' + minutesToTimeString(rStart) + '–' + minutesToTimeString(newStart) + ' 及 ' + minutesToTimeString(newEnd) + '–' + minutesToTimeString(rEnd));
+        } else if (rStart >= newStart && rEnd <= newEnd) {
             // Fully consumed by the new range: delete
             toDelete.push(record.id);
             adjustmentNotes.push('「' + typeName + '」（' + oldStartStr + '–' + oldEndStr + '）因完全重疊已被刪除');
@@ -1334,6 +1497,26 @@ async function saveInlineExerciseEdit(id) {
                 })
             });
             if (!resp.ok) throw new Error('調整衝突記錄失敗');
+        }
+        for (let i = 0; i < toInsert.length; i++) {
+            const extra = toInsert[i];
+            const resp = await fetch('/api/save-exercise-record', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    record_date: selectedDate,
+                    record_date_label: selectedDateLabel,
+                    actual_date: selectedRealDate,
+                    start_time: extra.start_time,
+                    end_time: extra.end_time,
+                    exercise_type: extra.exercise_type,
+                    intensity: extra.intensity,
+                    description: extra.description
+                })
+            });
+            if (!resp.ok) throw new Error('拆分衝突記錄失敗');
+            const insertResult = await resp.json();
+            if (!insertResult.success) throw new Error(insertResult.message || '拆分衝突記錄失敗');
         }
         const response = await fetch('/api/update-exercise-record/' + id, {
             method: 'PUT',
@@ -1436,12 +1619,7 @@ function cancelActivityLevel() {
 }
 
 function confirmActivityLevel() {
-    const activityLevel = document.getElementById('activityLevel').value;
-    
-    if (!activityLevel) {
-        alert('請選擇活動量');
-        return;
-    }
+    const activityLevel = document.getElementById('activityLevel').value || '平常';
     
     if (activityLevel !== '平常') {
         const reason = document.getElementById('activityReason').value.trim();
