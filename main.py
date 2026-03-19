@@ -301,6 +301,7 @@ def generate_report():
         # Options: 'low', 'medium', 'high'
         pdf_generator = SupabaseDietaryReportGenerator(
             SUPABASE_URL, SUPABASE_KEY,
+            output_dir='/tmp',
             image_preset='low',
             include_photos=True
         )
