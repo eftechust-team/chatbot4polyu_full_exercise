@@ -876,6 +876,7 @@ async function saveExerciseRecord(record) {
             body: JSON.stringify({
                 record_date: selectedDate,
                 record_date_label: selectedDateLabel,
+                actual_date: selectedRealDate, 
                 start_time: record.startTime,
                 end_time: record.endTime,
                 exercise_type: record.type,
@@ -1451,17 +1452,35 @@ function confirmActivityLevel() {
     }
 
     const reasonText = document.getElementById('activityReason').value.trim();
+    
+    fetch('/api/complete-exercise-day', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            record_date: selectedDate,
+            record_date_label: selectedDateLabel,
+            activity_level: activityLevel,
+            activity_reason: reasonText
+        })
+    })
+    .then(r => r.json())
+    .then(result => {
+        if (!result.success) {
+            console.error('Complete exercise day failed:', result.message);
+        }
+    })
+    .catch(err => console.error('Complete exercise day error:', err));
+
+    // localStorage 保留作为前端缓存
     const statusMap = JSON.parse(localStorage.getItem('exerciseComparedStatus') || '{}');
-    statusMap[selectedDate] = activityLevel + (reasonText ? `（${reasonText}）` : '');
+    statusMap[selectedDate] = activityLevel + (reasonText ? '（' + reasonText + '）' : '');
     localStorage.setItem('exerciseComparedStatus', JSON.stringify(statusMap));
     
-    // Close modal and reset fields
     document.getElementById('activityLevelModal').style.display = 'none';
     document.getElementById('activityLevel').value = '';
     document.getElementById('activityReason').value = '';
     document.getElementById('reasonSection').style.display = 'none';
 
-    // Show summary page (frontend only for now)
     showExerciseSummary();
 }
 

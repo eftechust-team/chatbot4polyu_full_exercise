@@ -397,6 +397,7 @@ function saveMealRecord() {
         const payload = {
             record_date: selectedDate,
             record_date_label: selectedDateLabel,
+            actual_date: selectedRealDate, 
             meal_type: mealType,
             meal_time: mealTime,
             location: mealLocation,
