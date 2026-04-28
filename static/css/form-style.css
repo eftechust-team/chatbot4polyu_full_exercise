@@ -866,7 +866,7 @@ button {
     }
     
     .form-container {
-        padding: 5px;
+        padding-top: 20%;
         min-height: auto;
     }
     
@@ -1097,7 +1097,107 @@ textarea {
 }
 
 @media (max-width: 768px) {
+    /* 移除外層表格的寬度限制並改為區塊顯示 */
     .meal-table {
-        min-width: 720px;
+        min-width: 100% !important;
+        display: block;
+        border: none;
+    }
+    
+    /* 隱藏外層表格的標題列 */
+    .meal-table thead {
+        display: none;
+    }
+    
+    /* 將表格的列與欄改為區塊顯示 */
+    .meal-table tbody, 
+    .meal-table tr, 
+    .meal-table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* 每一列資料變成獨立的卡片 */
+    .meal-table tr {
+        margin-bottom: 15px;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        padding: 12px;
+        background: #f9fafb;
+    }
+    
+    /* 調整儲存格的內距與邊框 */
+    .meal-table td {
+        border: none;
+        padding: 8px 0;
+        border-bottom: 1px dashed #e5e7eb;
+    }
+    
+    .meal-table td:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
+    }
+
+    /* 圖片預覽區塊置中 */
+    .meal-image-cell {
+        align-items: center;
+    }
+    
+    /* --- 內部食物清單表格也改為卡片式 --- */
+    .inner-food-table {
+        min-width: 100%;
+        display: block;
+    }
+    
+    .inner-food-table thead {
+        display: none;
+    }
+    
+    .inner-food-table tbody, 
+    .inner-food-table tr, 
+    .inner-food-table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .inner-food-table tr {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: #ffffff;
+    }
+    
+    .inner-food-table td {
+        border: none;
+        padding: 4px 0;
+    }
+    
+    /* 利用 CSS 偽元素為內部表格加上標題提示 */
+    .inner-food-table td:nth-child(1)::before { 
+        content: "食物名稱："; 
+        font-weight: bold; 
+        font-size: 12px; 
+        color: #4b5563; 
+        display: block; 
+        margin-bottom: 4px; 
+    }
+    .inner-food-table td:nth-child(2)::before { 
+        content: "份量："; 
+        font-weight: bold; 
+        font-size: 12px; 
+        color: #4b5563; 
+        display: block; 
+        margin-bottom: 4px; 
+    }
+    
+    /* 刪除按鈕靠右對齊 */
+    .inner-food-table td:nth-child(3) { 
+        text-align: right !important; 
+        margin-top: 5px;
     }
 }
+
+

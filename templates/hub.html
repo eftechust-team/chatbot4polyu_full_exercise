@@ -12,16 +12,15 @@
 <body class="form-page">
     <div class="top-bar">
         <a href="/hub" style="display:inline-flex; align-items:center; text-decoration:none;">
-            <img src="/static/logo.jpeg" alt="Logo"
-                style="max-height: 48px; height: auto; flex-shrink: 0; cursor: pointer;">
+            <img src="/static/logo.jpeg" alt="Logo">
         </a>
-        <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0; margin-left: auto;">
+        <div style="display: flex; align-items: center; font-size: 14px; gap: 12px; flex-shrink: 0; margin-left: auto;">
             <span>歡迎，{{ session.get('name', '參與者') }} (編號: {{ session.get('participant_id', '') }})</span>
             <button type="button" onclick="logout()" class="logout-btn">登出</button>
         </div>
     </div>
 
-    <div class="container" style="width: 100%; max-width: 1100px; margin: 0 auto;">
+    <div class="container">
         <div class="content">
             <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
                 <h2 class="section-title">記錄入口</h2>
