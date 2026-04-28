@@ -1902,6 +1902,7 @@ async function logout() {
             });
             const result = await response.json();
             if (result.success) {
+                localStorage.removeItem('recordRealDates'); 
                 window.location.href = result.redirect || '/login';
             }
         } catch (error) {

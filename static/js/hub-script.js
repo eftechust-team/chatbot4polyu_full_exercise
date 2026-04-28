@@ -43,11 +43,8 @@ function goToAdd(type) {
         return;
     }
 
-    const realDateMap = JSON.parse(localStorage.getItem('recordRealDates') || '{}');
-    realDateMap[key] = realDate;
-    localStorage.setItem('recordRealDates', JSON.stringify(realDateMap));
-
-    savedActualDates[key] = realDate;
+    // REMOVED localStorage saving here. 
+    // The database will handle saving the date when the form is submitted.
 
     const label = recordDateLabels[key] || key;
     const params = new URLSearchParams({ mode: 'add', record_date: key, record_date_label: label, real_date: realDate });
@@ -67,8 +64,9 @@ function goToView(type) {
     }
 
     const label = recordDateLabels[key] || key;
-    const realDateMap = JSON.parse(localStorage.getItem('recordRealDates') || '{}');
-    const realDate = realDateMap[key] || '';
+    
+    // Fetch the real date directly from our database-backed object instead of localStorage
+    const realDate = savedActualDates[key] || '';
     const params = new URLSearchParams({ mode: 'view', record_date: key, record_date_label: label, real_date: realDate });
 
     if (type === 'food') {
@@ -87,6 +85,8 @@ async function logout() {
         });
         const result = await response.json();
         if (result.success) {
+            // Clean up any legacy local storage data just in case
+            localStorage.removeItem('recordRealDates'); 
             window.location.href = result.redirect || '/login';
         }
     } catch (e) {
@@ -94,8 +94,6 @@ async function logout() {
         window.location.href = '/login';
     }
 }
-
-
 
 document.addEventListener('DOMContentLoaded', async function() {
     await loadSavedActualDates();
@@ -113,14 +111,7 @@ async function loadSavedActualDates() {
     } catch (e) {
         console.error('Load actual dates error:', e);
     }
-    
-    // 同時合併 localStorage（兜底）
-    const localMap = JSON.parse(localStorage.getItem('recordRealDates') || '{}');
-    for (const [k, v] of Object.entries(localMap)) {
-        if (!savedActualDates[k] && v) {
-            savedActualDates[k] = v;
-        }
-    }
+    // REMOVED the localStorage merging loop that was causing the ghost dates
 }
 
 // ========== dropdown 切換時檢查 ==========
@@ -141,7 +132,7 @@ function checkSavedDate() {
     }
 
     if (savedActualDates[selectedKey]) {
-        // ✅ 已有 → 鎖定顯示
+        // ✅ 已有 → 鎖定顯示 (Database confirmed)
         datePickerSection.style.display = 'none';
         dateLocked.style.display = 'block';
         lockedDateText.textContent = savedActualDates[selectedKey];
@@ -149,7 +140,7 @@ function checkSavedDate() {
         // 把值填入隱藏的 input，讓 goToAdd 能讀到
         document.getElementById('recordRealDate').value = ddmmyyyyToISO(savedActualDates[selectedKey]);
     } else {
-        // 沒有 → 正常選擇
+        // 沒有 → 正常選擇 (Database empty for this date)
         datePickerSection.style.display = 'block';
         dateLocked.style.display = 'none';
         document.getElementById('recordRealDate').value = '';
